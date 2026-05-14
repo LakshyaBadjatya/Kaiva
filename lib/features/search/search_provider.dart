@@ -51,6 +51,81 @@ class RecentSearchesNotifier extends StateNotifier<List<String>> {
   }
 }
 
+// ── Recently played songs from search (persisted to Hive) ────
+final recentSearchSongsProvider =
+    StateNotifierProvider<RecentSearchSongsNotifier, List<Song>>(
+        (ref) => RecentSearchSongsNotifier());
+
+class RecentSearchSongsNotifier extends StateNotifier<List<Song>> {
+  static const _maxRecent = 10;
+
+  RecentSearchSongsNotifier() : super(_load());
+
+  static List<Song> _load() {
+    final raw = Hive.box('kaiva_settings')
+        .get(SettingsKeys.recentSearchSongs, defaultValue: <dynamic>[]);
+    return (raw as List<dynamic>)
+        .map((e) {
+          try {
+            return Song.fromJson(Map<String, dynamic>.from(e as Map));
+          } catch (_) {
+            return null;
+          }
+        })
+        .whereType<Song>()
+        .toList();
+  }
+
+  void _persist(List<Song> songs) {
+    final serialized = songs.map(_songToMap).toList();
+    Hive.box('kaiva_settings').put(SettingsKeys.recentSearchSongs, serialized);
+  }
+
+  static Map<String, dynamic> _songToMap(Song s) => {
+        'id': s.id,
+        'name': s.title,
+        'primaryArtists': s.artist,
+        'artists': {
+          'primary': [
+            {'id': s.artistId, 'name': s.artist}
+          ]
+        },
+        'album': {'id': s.albumId, 'name': s.album},
+        'image': [
+          {'url': s.artworkUrl}
+        ],
+        'duration': s.durationSeconds.toString(),
+        'language': s.language,
+        'downloadUrl': s.streamUrls
+            .map((u) => {'quality': '${u.quality}kbps', 'url': u.url})
+            .toList(),
+        'hasLyrics': s.hasLyrics,
+        'lyricsId': s.lyricsId,
+        'explicitContent': s.isExplicit ? 1 : 0,
+        'year': s.year?.toString(),
+      };
+
+  void add(Song song) {
+    final updated = [
+      song,
+      ...state.where((s) => s.id != song.id),
+    ].take(_maxRecent).toList();
+    state = updated;
+    _persist(updated);
+  }
+
+  void remove(String songId) {
+    final updated = state.where((s) => s.id != songId).toList();
+    state = updated;
+    _persist(updated);
+  }
+
+  void clear() {
+    state = [];
+    _persist([]);
+  }
+}
+
 // ── Debounced search results ──────────────────────────────────
 final searchResultsProvider =
     StateNotifierProvider<SearchNotifier, AsyncValue<SearchResult?>>(

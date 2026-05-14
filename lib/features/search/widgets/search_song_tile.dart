@@ -4,6 +4,7 @@ import '../../../core/models/song.dart';
 import '../../../core/utils/song_loader.dart';
 import '../../../features/player/player_provider.dart';
 import '../../../shared/widgets/song_tile.dart';
+import '../search_provider.dart';
 
 class SearchSongTile extends ConsumerWidget {
   final Song song;
@@ -26,6 +27,7 @@ class SearchSongTile extends ConsumerWidget {
       song: song,
       isPlaying: isPlaying,
       onTap: () async {
+        ref.read(recentSearchSongsProvider.notifier).add(song);
         final q = queue ?? [song];
         final idx = indexInQueue ?? 0;
         final reordered = [q[idx], ...q.sublist(0, idx), ...q.sublist(idx + 1)];

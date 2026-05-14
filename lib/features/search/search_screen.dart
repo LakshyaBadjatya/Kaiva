@@ -1,8 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/models/song.dart';
 import '../../core/theme/kaiva_colors.dart';
 import '../../core/theme/kaiva_text_styles.dart';
+import '../../features/player/player_provider.dart';
+import '../../core/utils/song_loader.dart';
 import '../../shared/widgets/loading_shimmer.dart';
 import 'search_provider.dart';
 import 'widgets/search_song_tile.dart';
@@ -59,7 +63,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(searchResultsProvider);
-    final recent      = ref.watch(recentSearchesProvider);
+    final recent      = ref.watch(recentSearchSongsProvider);
 
     return Scaffold(
       body: SafeArea(

@@ -16,6 +16,7 @@ class SettingsKeys {
   static const String snoozedSongs      = 'snoozed_songs';
   static const String hiddenSongs       = 'hidden_songs';
   static const String recentSearches       = 'recent_searches';
+  static const String recentSearchSongs    = 'recent_search_songs';
   static const String onboardingComplete   = 'onboarding_complete';
   static const String onboardingLanguages  = 'onboarding_languages';
   static const String onboardingArtists    = 'onboarding_artists';
