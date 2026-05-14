@@ -61,13 +61,24 @@ class RecentSearchSongsNotifier extends StateNotifier<List<Song>> {
 
   RecentSearchSongsNotifier() : super(_load());
 
+  // Hive stores nested maps as Map<dynamic,dynamic>; deep-cast is required.
+  static dynamic _deepCast(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.fromEntries(
+        value.entries.map((e) => MapEntry(e.key.toString(), _deepCast(e.value))),
+      );
+    }
+    if (value is List) return value.map(_deepCast).toList();
+    return value;
+  }
+
   static List<Song> _load() {
     final raw = Hive.box('kaiva_settings')
         .get(SettingsKeys.recentSearchSongs, defaultValue: <dynamic>[]);
     return (raw as List<dynamic>)
         .map((e) {
           try {
-            return Song.fromJson(Map<String, dynamic>.from(e as Map));
+            return Song.fromJson(_deepCast(e) as Map<String, dynamic>);
           } catch (_) {
             return null;
           }

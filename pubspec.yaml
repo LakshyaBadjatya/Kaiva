@@ -12,7 +12,6 @@ dependencies:
 
   # ── Audio ──────────────────────────────────────────────────
   just_audio: ^0.9.40
-  just_audio_background: ^0.0.1-beta.17
   audio_session: ^0.1.21
   audio_service: ^0.18.15
 
@@ -97,6 +96,15 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   custom_lint: ^0.7.6
   riverpod_lint: ^2.4.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/kaiva_logo.png"
+  min_sdk_android: 21
+  web:
+    generate: false
 
 flutter:
   uses-material-design: true

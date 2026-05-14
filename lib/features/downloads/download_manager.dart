@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_storage_info/flutter_storage_info.dart';
@@ -74,6 +75,20 @@ final downloadedSongsProvider = StreamProvider<List<Song>>((ref) {
 final _taskToSongId = <String, String>{};
 final _taskToDir = <String, String>{}; // taskId → download directory path
 
+// Global port — created once at app startup so it exists before any
+// download callback can fire. Stored here so DownloadManager can listen to it.
+final _globalPort = ReceivePort();
+
+/// Must be called in main() before FlutterDownloader.initialize(), so the
+/// IsolateNameServer port exists before any callback arrives.
+void initDownloadPort() {
+  IsolateNameServer.removePortNameMapping('downloader_send_port');
+  IsolateNameServer.registerPortWithName(
+    _globalPort.sendPort,
+    'downloader_send_port',
+  );
+}
+
 // ── Download manager ─────────────────────────────────────────
 final downloadManagerProvider = Provider<DownloadManager>((ref) {
   final manager = DownloadManager(ref);
@@ -85,7 +100,6 @@ final downloadManagerProvider = Provider<DownloadManager>((ref) {
 class DownloadManager {
   final Ref _ref;
 
-  ReceivePort? _port;
   StreamSubscription? _sub;
 
   DownloadManager(this._ref);
@@ -93,18 +107,11 @@ class DownloadManager {
   // ── IsolateNameServer wiring ─────────────────────────────
 
   void _startListening() {
-    _port = ReceivePort();
-    IsolateNameServer.registerPortWithName(
-      _port!.sendPort,
-      'downloader_send_port',
-    );
-    _sub = _port!.listen(_onCallback);
+    _sub = _globalPort.listen(_onCallback);
   }
 
   void _stopListening() {
-    IsolateNameServer.removePortNameMapping('downloader_send_port');
     _sub?.cancel();
-    _port?.close();
   }
 
   void _onCallback(dynamic data) async {
@@ -177,6 +184,10 @@ class DownloadManager {
     await Directory(downloadDir).create(recursive: true);
 
     // Pick the best quality URL at or below the user's quality setting
+    if (song.streamUrls.isEmpty) {
+      debugPrint('DownloadManager: no stream URLs for ${song.id}, aborting');
+      return;
+    }
     final quality = Hive.box('kaiva_settings')
         .get(SettingsKeys.downloadQuality, defaultValue: '320') as String;
     final sorted = [...song.streamUrls]
@@ -184,7 +195,7 @@ class DownloadManager {
     final targetQuality = int.tryParse(quality) ?? 320;
     final best = sorted.firstWhere(
       (s) => s.quality <= targetQuality,
-      orElse: () => sorted.isNotEmpty ? sorted.last : song.streamUrls.first,
+      orElse: () => sorted.last,
     );
 
     // Update DB with chosen quality before enqueue

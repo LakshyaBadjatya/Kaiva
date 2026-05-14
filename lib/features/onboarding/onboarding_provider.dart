@@ -195,7 +195,7 @@ List<ArtistEntry> sortedArtistsFor(List<String> selectedLanguages) {
   final rest      = <ArtistEntry>[];
 
   for (final a in kOnboardingArtists) {
-    final matchesPrimary = a.languages.any((l) => selectedLanguages.contains(l) && l != 'English');
+    final matchesPrimary = a.languages.any((l) => selectedLanguages.contains(l));
     final isEnglishOnly  = a.languages.every((l) => l == 'English' || l == 'Korean' || l == 'Spanish');
     if (matchesPrimary) {
       primary.add(a);

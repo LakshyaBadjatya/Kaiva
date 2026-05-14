@@ -69,6 +69,8 @@ class SyncService {
     for (final entry in remote.entries) {
       // Don't overwrite apiBaseUrl with cloud value — keep local proxy setting
       if (entry.key == SettingsKeys.apiBaseUrl) continue;
+      // Never let cloud data reset onboarding — it should only be set locally once
+      if (entry.key == SettingsKeys.onboardingComplete) continue;
       await box.put(entry.key, entry.value);
     }
   }
@@ -80,6 +82,7 @@ class SyncService {
       final box = Hive.box('kaiva_settings');
       for (final entry in remote.entries) {
         if (entry.key == SettingsKeys.apiBaseUrl) continue;
+        if (entry.key == SettingsKeys.onboardingComplete) continue;
         box.put(entry.key, entry.value);
       }
     });

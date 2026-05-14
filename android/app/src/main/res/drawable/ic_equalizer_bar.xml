@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single equalizer bar — scaled vertically via ObjectAnimator on the parent -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFEF9F27" />
+    <corners android:radius="2dp" />
+</shape>

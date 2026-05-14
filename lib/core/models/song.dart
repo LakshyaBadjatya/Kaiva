@@ -77,7 +77,7 @@ class Song {
     album: album,
     duration: Duration(seconds: durationSeconds),
     artUri: Uri.parse(highResArtworkUrl),
-    extras: {'songId': id, 'artworkUrl': artworkUrl},
+    extras: {'songId': id, 'artworkUrl': artworkUrl, 'artistId': artistId, 'albumId': albumId},
   );
 
   static String _decode(String? s) {

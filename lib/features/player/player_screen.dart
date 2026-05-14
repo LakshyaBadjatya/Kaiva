@@ -17,6 +17,9 @@ import 'widgets/player_controls.dart';
 import 'widgets/lyrics_view.dart';
 import 'widgets/queue_sheet.dart';
 import 'widgets/sleep_timer_sheet.dart';
+import '../../shared/widgets/waveform_animation.dart';
+import '../../shared/widgets/song_options_sheet.dart';
+import 'widgets/fullscreen_art_view.dart';
 
 class PlayerScreen extends ConsumerStatefulWidget {
   const PlayerScreen({super.key});
@@ -27,21 +30,18 @@ class PlayerScreen extends ConsumerStatefulWidget {
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen>
     with TickerProviderStateMixin {
-  late final AnimationController _vinylCtrl;
   late final AnimationController _bgColorCtrl;
 
   Color _bgColor = const Color(0xFF0B0D12);
   Color _prevBgColor = const Color(0xFF0B0D12);
   String? _lastSongId;
   int _pageIndex = 0;
+  double _dragDeltaX = 0;
+  double _dragDeltaY = 0;
 
   @override
   void initState() {
     super.initState();
-    _vinylCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    );
     _bgColorCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -50,7 +50,6 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 
   @override
   void dispose() {
-    _vinylCtrl.dispose();
     _bgColorCtrl.dispose();
     super.dispose();
   }
@@ -113,11 +112,47 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   }
 
   Widget _buildContent(Song song) {
-    return Column(
+    final handler = ref.read(audioHandlerProvider);
+    return GestureDetector(
+      onHorizontalDragUpdate: (d) => _dragDeltaX += d.delta.dx,
+      onHorizontalDragEnd: (d) {
+        if (_dragDeltaX < -60) {
+          HapticFeedback.lightImpact();
+          handler.skipToNext();
+        } else if (_dragDeltaX > 60) {
+          HapticFeedback.lightImpact();
+          handler.skipToPrevious();
+        }
+        _dragDeltaX = 0;
+      },
+      onVerticalDragUpdate: (d) => _dragDeltaY += d.delta.dy,
+      onVerticalDragEnd: (d) {
+        if (_dragDeltaY > 80) {
+          HapticFeedback.mediumImpact();
+          handler.stop();
+          context.pop();
+        }
+        _dragDeltaY = 0;
+      },
+      child: Column(
       children: [
         _buildTopBar(song),
         const SizedBox(height: 16),
-        _AlbumArtWidget(song: song, vinylCtrl: _vinylCtrl),
+        _AlbumArtWidget(
+          song: song,
+          onTap: () => Navigator.of(context).push(
+            PageRouteBuilder(
+              opaque: false,
+              barrierColor: Colors.transparent,
+              pageBuilder: (_, __, ___) => FullscreenArtView(song: song),
+              transitionsBuilder: (_, anim, __, child) => FadeTransition(
+                opacity: anim,
+                child: child,
+              ),
+              transitionDuration: const Duration(milliseconds: 300),
+            ),
+          ),
+        ),
         const SizedBox(height: 24),
         _buildSongInfo(song),
         const SizedBox(height: 16),
@@ -127,6 +162,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
         const SizedBox(height: 16),
         _buildBottomTabs(song),
       ],
+      ),
     );
   }
 
@@ -216,7 +252,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                 ),
                 const SizedBox(height: 4),
                 GestureDetector(
-                  onTap: () => context.push('/artist/${song.artistId}'),
+                  onTap: () {
+                    if (song.artistId.isNotEmpty) {
+                      context.push('/artist/${song.artistId}');
+                    }
+                  },
                   child: Text(
                     song.artist,
                     style: KaivaTextStyles.artistName.copyWith(
@@ -230,6 +270,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
               ],
             ),
           ),
+          const _PlayerWaveform(),
+          const SizedBox(width: 8),
           _LikeButton(song: song),
         ],
       ),
@@ -317,7 +359,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                   color: KaivaColors.textSecondary),
               title: const Text('Add to playlist',
                   style: KaivaTextStyles.bodyMedium),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => SongOptionsSheet(song: song),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.queue_music_rounded,
@@ -346,7 +396,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                   const Text('Go to artist', style: KaivaTextStyles.bodyMedium),
               onTap: () {
                 Navigator.pop(context);
-                context.push('/artist/${song.artistId}');
+                if (song.artistId.isNotEmpty) {
+                  context.push('/artist/${song.artistId}');
+                }
               },
             ),
             ListTile(
@@ -356,7 +408,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                   const Text('Go to album', style: KaivaTextStyles.bodyMedium),
               onTap: () {
                 Navigator.pop(context);
-                context.push('/album/${song.albumId}');
+                if (song.albumId.isNotEmpty) {
+                  context.push('/album/${song.albumId}');
+                }
               },
             ),
             const SizedBox(height: 24),
@@ -372,26 +426,20 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 // never cause the parent PlayerScreen to rebuild.
 class _AlbumArtWidget extends ConsumerWidget {
   final Song song;
-  final AnimationController vinylCtrl;
+  final VoidCallback? onTap;
 
-  const _AlbumArtWidget({required this.song, required this.vinylCtrl});
+  const _AlbumArtWidget({required this.song, this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isPlaying = ref.watch(isPlayingProvider);
 
-    if (isPlaying) {
-      vinylCtrl.repeat();
-    } else {
-      vinylCtrl.stop();
-    }
-
     return RepaintBoundary(
-      child: AnimatedScale(
-        scale: isPlaying ? 1.0 : 0.92,
-        duration: const Duration(milliseconds: 300),
-        child: RotationTransition(
-          turns: vinylCtrl,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedScale(
+          scale: isPlaying ? 1.0 : 0.92,
+          duration: const Duration(milliseconds: 300),
           child: Hero(
             tag: 'album_art_${song.id}',
             child: ClipRRect(
@@ -424,6 +472,22 @@ class _AlbumArtWidget extends ConsumerWidget {
   }
 }
 
+// ── Player waveform ───────────────────────────────────────────
+class _PlayerWaveform extends ConsumerWidget {
+  const _PlayerWaveform();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPlaying = ref.watch(isPlayingProvider);
+    return WaveformAnimation(
+      isPlaying: isPlaying,
+      width: 28,
+      height: 22,
+      barCount: 4,
+    );
+  }
+}
+
 // ── Like button ───────────────────────────────────────────────
 class _LikeButton extends ConsumerWidget {
   final Song song;
@@ -446,29 +510,30 @@ class _LikeButton extends ConsumerWidget {
                 : KaivaColors.textSecondary,
           ),
           iconSize: 26,
-          onPressed: () {
+          onPressed: () async {
             HapticFeedback.lightImpact();
+            // Always ensure song row exists before toggling like
+            await db.songsDao.upsertSong(SongsCompanion(
+              id: Value(song.id),
+              title: Value(song.title),
+              artist: Value(song.artist),
+              artistId: Value(song.artistId),
+              album: Value(song.album),
+              albumId: Value(song.albumId),
+              artworkUrl: Value(song.artworkUrl),
+              duration: Value(song.durationSeconds),
+              language: Value(song.language),
+              streamUrl: Value(song.bestStreamUrl),
+              hasLyrics: Value(song.hasLyrics),
+              isExplicit: Value(song.isExplicit),
+              year: Value(song.year),
+            ));
+            await db.likedSongsDao.toggleLike(song.id);
             if (!isLiked) {
-              db.songsDao.upsertSong(SongsCompanion(
-                id: Value(song.id),
-                title: Value(song.title),
-                artist: Value(song.artist),
-                artistId: Value(song.artistId),
-                album: Value(song.album),
-                albumId: Value(song.albumId),
-                artworkUrl: Value(song.artworkUrl),
-                duration: Value(song.durationSeconds),
-                language: Value(song.language),
-                streamUrl: Value(song.bestStreamUrl),
-                hasLyrics: Value(song.hasLyrics),
-                isExplicit: Value(song.isExplicit),
-                year: Value(song.year),
-              ));
               ref.read(syncServiceProvider).pushLikedSong(song.id);
             } else {
               ref.read(syncServiceProvider).removeLikedSong(song.id);
             }
-            db.likedSongsDao.toggleLike(song.id);
           },
         );
       },

@@ -3,33 +3,33 @@ import 'package:flutter/material.dart';
 class KaivaColors {
   KaivaColors._();
 
-  // ── Core backgrounds (deep charcoal / near-black) ──────────
-  static const Color backgroundPrimary   = Color(0xFF0B0D12);
-  static const Color backgroundSecondary = Color(0xFF12151C);
-  static const Color backgroundTertiary  = Color(0xFF1A1E28);
-  static const Color backgroundElevated  = Color(0xFF222736);
+  // ── Core backgrounds (dark navy / near-black) ──────────────
+  static const Color backgroundPrimary   = Color(0xFF0F1117);
+  static const Color backgroundSecondary = Color(0xFF1A1D27);
+  static const Color backgroundTertiary  = Color(0xFF232736);
+  static const Color backgroundElevated  = Color(0xFF2D3348);
 
   // ── Surface (light mode) ─────────────────────────────────
   static const Color surfaceLight        = Color(0xFFF6F8FD);
   static const Color surfaceMidLight     = Color(0xFFECEFF7);
   static const Color surfaceDeepLight    = Color(0xFFDFE3EF);
 
-  // ── Accent — electric violet-blue ────────────────────────
-  static const Color accentPrimary       = Color(0xFF7C6EF0);
-  static const Color accentBright        = Color(0xFFAA9FF5);
-  static const Color accentDeep          = Color(0xFF5548C8);
-  static const Color accentDim           = Color(0xFF2D2860);
-  static const Color accentGlow          = Color(0x337C6EF0);
+  // ── Accent — vivid red ───────────────────────────────────
+  static const Color accentPrimary       = Color(0xFFE53935);
+  static const Color accentBright        = Color(0xFFFF6F60);
+  static const Color accentDeep          = Color(0xFFFF5252);
+  static const Color accentDim           = Color(0xFF3A0A09);
+  static const Color accentGlow          = Color(0x33E53935);
 
-  // ── Secondary accent — rose/coral ───────────────────────
-  static const Color secondaryAccent     = Color(0xFFFF6B8A);
-  static const Color secondaryGlow       = Color(0x33FF6B8A);
+  // ── Secondary accent — teal ─────────────────────────────
+  static const Color secondaryAccent     = Color(0xFF00897B);
+  static const Color secondaryGlow       = Color(0x3300897B);
 
   // ── Text ─────────────────────────────────────────────────
-  static const Color textPrimary         = Color(0xFFEEF0F8);
-  static const Color textSecondary       = Color(0xFF8A92B2);
-  static const Color textMuted           = Color(0xFF555E7A);
-  static const Color textDisabled        = Color(0xFF2E3348);
+  static const Color textPrimary         = Color(0xFFF0F2FF);
+  static const Color textSecondary       = Color(0xFF9AA5C4);
+  static const Color textMuted           = Color(0xFF5A6480);
+  static const Color textDisabled        = Color(0xFF2D3348);
   static const Color textOnAccent        = Color(0xFFFFFFFF);
 
   // Text (light mode)
@@ -38,30 +38,30 @@ class KaivaColors {
   static const Color textMutedLight      = Color(0xFF7A83A8);
 
   // ── Borders ───────────────────────────────────────────────
-  static const Color borderSubtle        = Color(0xFF1E2232);
-  static const Color borderDefault       = Color(0xFF2C3350);
-  static const Color borderStrong        = Color(0xFF3D4670);
+  static const Color borderSubtle        = Color(0xFF1E2230);
+  static const Color borderDefault       = Color(0xFF2D3348);
+  static const Color borderStrong        = Color(0xFF3D4560);
 
   // Borders (light mode)
   static const Color borderSubtleLight   = Color(0xFFDDE1EF);
   static const Color borderDefaultLight  = Color(0xFFC4CBE2);
 
   // ── Semantic ─────────────────────────────────────────────
-  static const Color success             = Color(0xFF3DD68C);
-  static const Color error               = Color(0xFFFF5C6E);
-  static const Color warning             = Color(0xFFFFB347);
-  static const Color info                = Color(0xFF4FC3F7);
+  static const Color success             = Color(0xFF00897B);
+  static const Color error               = Color(0xFFE53935);
+  static const Color warning             = Color(0xFFFF8F00);
+  static const Color info                = Color(0xFF1E88E5);
 
   // ── Player-specific ───────────────────────────────────────
-  static const Color seekBarTrack        = Color(0xFF2C3350);
-  static const Color seekBarFilled       = Color(0xFF7C6EF0);
-  static const Color seekBarThumb        = Color(0xFFAA9FF5);
-  static const Color miniPlayerBg        = Color(0xFF12151C);
-  static const Color nowPlayingBg        = Color(0xFF0B0D12);
-  static const Color waveformActive      = Color(0xFF7C6EF0);
-  static const Color waveformInactive    = Color(0xFF2C3350);
+  static const Color seekBarTrack        = Color(0xFF2D3348);
+  static const Color seekBarFilled       = Color(0xFFE53935);
+  static const Color seekBarThumb        = Color(0xFFFF6F60);
+  static const Color miniPlayerBg        = Color(0xFF1A1D27);
+  static const Color nowPlayingBg        = Color(0xFF0F1117);
+  static const Color waveformActive      = Color(0xFFE53935);
+  static const Color waveformInactive    = Color(0xFF2D3348);
 
   // ── Download badge ────────────────────────────────────────
-  static const Color downloadedBadgeBg   = Color(0xFF1A1E34);
-  static const Color downloadedBadgeFg   = Color(0xFF7C6EF0);
+  static const Color downloadedBadgeBg   = Color(0xFF1A1D27);
+  static const Color downloadedBadgeFg   = Color(0xFFE53935);
 }

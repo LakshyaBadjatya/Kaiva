@@ -5,11 +5,12 @@ import '../../core/models/song.dart';
 import '../../core/theme/kaiva_text_styles.dart';
 import '../../core/utils/song_loader.dart';
 import '../../features/player/player_provider.dart';
+import '../../providers/connectivity_provider.dart';
 import '../../shared/widgets/loading_shimmer.dart';
 import '../../shared/widgets/error_state.dart';
 import 'home_provider.dart';
-import 'widgets/greeting_header.dart';
 import 'widgets/language_chips.dart';
+import 'widgets/quick_access_grid.dart';
 import 'widgets/song_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -20,41 +21,47 @@ class HomeScreen extends ConsumerWidget {
     final language = ref.watch(selectedLanguageProvider);
     final feedAsync = ref.watch(homeFeedProvider(language));
     final continueListening = ref.watch(continueListeningProvider);
+    final isOnline = ref.watch(isOnlineProvider);
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           _buildAppBar(context),
           const SliverToBoxAdapter(child: SizedBox(height: 12)),
-          const SliverToBoxAdapter(child: GreetingHeader()),
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
           const SliverToBoxAdapter(child: LanguageChips()),
-          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+          // ── Quick-access grid (Spotify-style 2-col recent cards) ──
+          if (continueListening.valueOrNull?.isNotEmpty == true)
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  QuickAccessGrid(
+                    songs: continueListening.value!,
+                    onTap: (song, index) =>
+                        _playSong(ref, continueListening.value!, index),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 4)),
           feedAsync.when(
             loading: () => const SliverToBoxAdapter(child: _ShimmerFeed()),
             error: (e, _) => SliverToBoxAdapter(
               child: ErrorState(
-                message: 'Could not load music. Check your connection.',
-                onRetry: () => ref.invalidate(homeFeedProvider(language)),
+                message: isOnline
+                    ? 'Could not load music. The server may be down.'
+                    : 'You\'re offline. No downloaded songs yet.',
+                onRetry: isOnline
+                    ? () => ref.invalidate(homeFeedProvider(language))
+                    : null,
               ),
             ),
             data: (feed) => SliverList(
               delegate: SliverChildListDelegate([
-                // Continue Listening (recently played, only if non-empty)
-                if (continueListening.valueOrNull?.isNotEmpty == true) ...[
-                  _Section(
-                    title: 'CONTINUE LISTENING',
-                    child: _HorizontalSongs(
-                      songs: continueListening.value!,
-                      onTap: (song, index) =>
-                          _playSong(ref, continueListening.value!, index),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
                 if (feed.trending.isNotEmpty) ...[
                   _Section(
-                    title: 'TRENDING NOW',
+                    title: isOnline ? 'TRENDING NOW' : 'YOUR MUSIC',
                     child: _HorizontalSongs(
                       songs: feed.trending,
                       onTap: (song, index) => _playSong(ref, feed.trending, index),
@@ -150,14 +157,17 @@ class HomeScreen extends ConsumerWidget {
   }
 
   SliverAppBar _buildAppBar(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 17
+            ? 'Good afternoon'
+            : 'Good evening';
+
     return SliverAppBar(
       floating: true,
       snap: true,
-      title: const Row(
-        children: [
-          Text('Kaiva', style: KaivaTextStyles.headlineLarge),
-        ],
-      ),
+      title: Text(greeting, style: KaivaTextStyles.headlineLarge),
       actions: [
         IconButton(
           icon: const Icon(Icons.search_rounded),

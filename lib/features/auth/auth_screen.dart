@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/firebase/firebase_service.dart';
@@ -152,7 +153,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
                     if (_error != null) ...[
                       const SizedBox(height: 12),
-                      Text(_error!, style: TextStyle(color: Colors.red.shade400, fontSize: 13)),
+                      Text(_error!, style: const TextStyle(color: KaivaColors.error, fontSize: 13)),
                     ],
 
                     const SizedBox(height: 28),
@@ -169,7 +170,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         ),
                         child: _loading
                             ? const SizedBox(width: 22, height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                child: CircularProgressIndicator(strokeWidth: 2, color: KaivaColors.textOnAccent))
                             : AnimatedBuilder(
                                 animation: _tabs,
                                 builder: (_, __) => Text(
@@ -204,10 +205,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           side: const BorderSide(color: KaivaColors.borderSubtle),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        icon: Image.network(
-                          'https://www.google.com/favicon.ico',
+                        icon: CachedNetworkImage(
+                          imageUrl: 'https://www.google.com/favicon.ico',
                           width: 18, height: 18,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata_rounded, size: 22),
+                          errorWidget: (_, __, ___) => const Icon(Icons.g_mobiledata_rounded, size: 22),
                         ),
                         label: Text('Continue with Google',
                             style: KaivaTextStyles.labelLarge.copyWith(color: KaivaColors.textPrimary)),
@@ -270,7 +271,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.red.shade400),
+          borderSide: const BorderSide(color: KaivaColors.error),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),

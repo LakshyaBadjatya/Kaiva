@@ -211,13 +211,13 @@ class _SongOptionsSheetState extends ConsumerState<SongOptionsSheet> {
     _Option(
       icon: _isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
       label: _isLiked ? 'Unlike' : 'Like',
-      iconColor: _isLiked ? Colors.redAccent : null,
+      iconColor: _isLiked ? KaivaColors.secondaryAccent : null,
       onTap: _toggleLike,
       trailing: _likeAnimating
           ? const SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent),
+              child: CircularProgressIndicator(strokeWidth: 2, color: KaivaColors.secondaryAccent),
             )
           : null,
     ),

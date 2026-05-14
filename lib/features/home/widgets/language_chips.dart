@@ -5,6 +5,7 @@ import '../../../core/theme/kaiva_text_styles.dart';
 import '../home_provider.dart';
 
 const _languages = [
+  ('All',       'all'),
   ('Hindi',     'hindi'),
   ('English',   'english'),
   ('Tamil',     'tamil'),

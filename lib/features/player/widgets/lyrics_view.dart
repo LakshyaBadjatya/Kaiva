@@ -9,9 +9,14 @@ import '../../../core/theme/kaiva_colors.dart';
 import '../../../core/theme/kaiva_text_styles.dart';
 import '../player_provider.dart';
 
+// ── Public widget — used by both PlayerScreen and FullscreenArtView ──
 class LyricsView extends ConsumerStatefulWidget {
   final String songId;
-  const LyricsView({super.key, required this.songId});
+
+  /// When true, uses a larger base font suited for the fullscreen landscape view.
+  final bool fullscreen;
+
+  const LyricsView({super.key, required this.songId, this.fullscreen = false});
 
   @override
   ConsumerState<LyricsView> createState() => _LyricsViewState();
@@ -46,7 +51,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
       final response =
           await ApiClient.instance().get(ApiEndpoints.lyrics(widget.songId));
       final body = response.data as Map<String, dynamic>?;
-      // API may return { data: { lyrics: "..." } } or { lyrics: "..." } directly
       final inner = body?['data'] as Map<String, dynamic>?
           ?? (body?.containsKey('lyrics') == true ? body : null);
       if (inner != null && inner['lyrics'] != null) {
@@ -55,16 +59,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
           _loading = false;
         });
       } else {
-        setState(() {
-          _error = 'unavailable';
-          _loading = false;
-        });
+        setState(() { _error = 'unavailable'; _loading = false; });
       }
     } catch (_) {
-      setState(() {
-        _error = 'unavailable';
-        _loading = false;
-      });
+      setState(() { _error = 'unavailable'; _loading = false; });
     }
   }
 
@@ -82,10 +80,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
       setState(() => _currentLineIndex = idx);
       if (_scrollCtrl.isAttached) {
         _scrollCtrl.scrollTo(
-          index: idx,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          alignment: 0.4,
+          index: (idx - 1).clamp(0, lyrics.lines.length - 1),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          alignment: 0.0,
         );
       }
     }
@@ -93,7 +91,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to playback position for synced scrolling
     ref.listen(positionProvider, (_, next) {
       if (next.hasValue) _onPositionChanged(next.value!);
     });
@@ -113,7 +110,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
           _scrollResumeTimer?.cancel();
         } else if (n is ScrollEndNotification) {
           _scrollResumeTimer = Timer(const Duration(seconds: 5), () {
-            setState(() => _userScrolling = false);
+            if (mounted) setState(() => _userScrolling = false);
           });
         }
         return false;
@@ -122,43 +119,29 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
         itemCount: lyrics.lines.length,
         itemScrollController: _scrollCtrl,
         itemPositionsListener: _positionsListener,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        itemBuilder: (context, i) {
-          final line = lyrics.lines[i];
-          final isCurrent = i == _currentLineIndex;
-          final isPast = i < _currentLineIndex;
-
-          return GestureDetector(
-            onTap: line.timestamp != null
-                ? () => ref.read(audioHandlerProvider).seek(line.timestamp!)
-                : null,
-            child: AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 150),
-              style: isCurrent
-                  ? KaivaTextStyles.songTitle.copyWith(
-                      fontSize: 18,
-                      color: KaivaColors.accentPrimary,
-                    )
-                  : KaivaTextStyles.bodyLarge.copyWith(
-                      fontSize: 15,
-                      color: isPast
-                          ? KaivaColors.textMuted.withValues(alpha: 0.7)
-                          : KaivaColors.textSecondary.withValues(alpha: 0.85),
-                      height: 1.8,
-                    ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text(line.text, textAlign: TextAlign.center),
-              ),
-            ),
-          );
-        },
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.fullscreen ? 8 : 24,
+          vertical: widget.fullscreen ? 16 : 40,
+        ),
+        itemBuilder: (context, i) => _LyricLine(
+          text: lyrics.lines[i].text,
+          distance: i - _currentLineIndex,
+          fullscreen: widget.fullscreen,
+          onTap: lyrics.lines[i].timestamp != null
+              ? () => ref
+                  .read(audioHandlerProvider)
+                  .seek(lyrics.lines[i].timestamp!)
+              : null,
+        ),
       ),
     );
   }
 
   Widget _buildPlainText(String text) => SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+        padding: EdgeInsets.symmetric(
+          horizontal: widget.fullscreen ? 8 : 24,
+          vertical: widget.fullscreen ? 16 : 40,
+        ),
         child: Text(
           text,
           style: KaivaTextStyles.bodyLarge.copyWith(
@@ -186,4 +169,84 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   Widget _buildShimmer() => const Center(
         child: CircularProgressIndicator(color: KaivaColors.accentPrimary),
       );
+}
+
+// ── Single lyric line with cascade animation ──────────────────
+class _LyricLine extends StatelessWidget {
+  final String text;
+
+  /// Signed distance from the active line: 0 = current, -1 = one above, +1 = one below.
+  final int distance;
+  final bool fullscreen;
+  final VoidCallback? onTap;
+
+  const _LyricLine({
+    required this.text,
+    required this.distance,
+    required this.fullscreen,
+    this.onTap,
+  });
+
+  // ── Style parameters by distance ──────────────────────────────
+  static const double _baseFontNormal = 18;
+  static const double _baseFontFullscreen = 15;
+
+  double get _fontSize {
+    final base = fullscreen ? _baseFontFullscreen : _baseFontNormal;
+    if (distance == 0) return base + (fullscreen ? 4 : 6); // current: biggest
+    final d = distance.abs();
+    if (d == 1) return base;
+    if (d == 2) return base - 1.5;
+    return base - 3;
+  }
+
+  double get _opacity {
+    if (distance == 0) return 1.0;
+    final d = distance.abs();
+    if (d == 1) return 0.55;
+    if (d == 2) return 0.35;
+    return 0.20;
+  }
+
+  FontWeight get _fontWeight {
+    if (distance == 0) return FontWeight.w700;
+    if (distance.abs() == 1) return FontWeight.w500;
+    return FontWeight.w400;
+  }
+
+  Color get _color {
+    if (distance == 0) return KaivaColors.textPrimary;
+    // Lines above are slightly warmer; lines below cooler
+    return distance < 0 ? KaivaColors.textSecondary : KaivaColors.textMuted;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: fullscreen ? 4 : 6),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontSize: _fontSize,
+            fontWeight: _fontWeight,
+            color: _color.withValues(alpha: _opacity),
+            height: 1.5,
+          ),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            opacity: _opacity,
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

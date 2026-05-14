@@ -19,7 +19,11 @@ class Lyrics {
   });
 
   factory Lyrics.fromJson(String songId, Map<String, dynamic> json) {
-    final rawLyrics = json['lyrics'] as String? ?? '';
+    final rawLyrics = (json['lyrics'] as String? ?? '')
+        .replaceAll('<br>', '\n')
+        .replaceAll('<br/>', '\n')
+        .replaceAll('<br />', '\n')
+        .replaceAll(RegExp(r'<[^>]+>'), ''); // strip any other HTML tags
     final lines = _parseLyrics(rawLyrics);
     final isTimed = lines.any((l) => l.timestamp != null);
     return Lyrics(

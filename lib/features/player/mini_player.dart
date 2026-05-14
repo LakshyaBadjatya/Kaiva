@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:marquee/marquee.dart';
+import '../../core/database/database_provider.dart';
 import '../../core/theme/kaiva_colors.dart';
 import '../../core/theme/kaiva_text_styles.dart';
 import '../../core/models/song.dart';
@@ -191,10 +192,24 @@ class _LikeButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isLiked = ref
+        .watch(
+          StreamProvider.autoDispose((r) =>
+              r.watch(databaseProvider).likedSongsDao.watchIsLiked(songId)),
+        )
+        .valueOrNull ??
+        false;
+
     return IconButton(
-      icon: const Icon(Icons.favorite_border, size: 20),
-      color: KaivaColors.textMuted,
-      onPressed: () => HapticFeedback.lightImpact(),
+      icon: Icon(
+        isLiked ? Icons.favorite_rounded : Icons.favorite_border,
+        size: 20,
+      ),
+      color: isLiked ? KaivaColors.secondaryAccent : KaivaColors.textMuted,
+      onPressed: () {
+        HapticFeedback.lightImpact();
+        ref.read(databaseProvider).likedSongsDao.toggleLike(songId);
+      },
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
     );

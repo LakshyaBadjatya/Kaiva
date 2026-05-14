@@ -11,6 +11,7 @@ import 'package:flutter_downloader/flutter_downloader.dart';
 import 'app.dart';
 import 'core/api/api_client.dart';
 import 'core/api/api_endpoints.dart';
+import 'core/utils/settings_keys.dart';
 import 'core/database/database_provider.dart';
 import 'core/database/kaiva_database.dart';
 import 'core/firebase/sync_service.dart';
@@ -18,14 +19,33 @@ import 'core/theme/kaiva_colors.dart';
 import 'features/downloads/download_manager.dart';
 import 'features/player/audio_handler.dart';
 import 'features/player/player_provider.dart';
-
 // Bootstraps sync service on app start so it activates the moment the user signs in
-class _AppWithSync extends ConsumerWidget {
+class _AppWithSync extends ConsumerStatefulWidget {
   const _AppWithSync();
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(syncServiceProvider);      // keeps SyncService alive for the app lifetime
-    ref.watch(downloadManagerProvider);  // keeps download port listener alive
+  ConsumerState<_AppWithSync> createState() => _AppWithSyncState();
+}
+
+class _AppWithSyncState extends ConsumerState<_AppWithSync> {
+  @override
+  void initState() {
+    super.initState();
+    _restoreAudioSettings();
+  }
+
+  void _restoreAudioSettings() {
+    final box = Hive.box('kaiva_settings');
+    final handler = ref.read(audioHandlerProvider);
+    final crossfade = box.get(SettingsKeys.crossfadeDuration, defaultValue: 0) as int;
+    if (crossfade > 0) handler.setCrossfade(crossfade);
+    final gapless = box.get(SettingsKeys.gaplessPlayback, defaultValue: false) as bool;
+    if (gapless) handler.setGapless(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(syncServiceProvider);
+    ref.watch(downloadManagerProvider);
     return const KaivaApp();
   }
 }
@@ -62,7 +82,7 @@ Future<_AppDeps> _initApp() async {
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.lakshya.kaiva.channel.audio',
       androidNotificationChannelName: 'Kaiva',
-      androidNotificationOngoing: true,
+      androidNotificationOngoing: false,
       androidStopForegroundOnPause: true,
       notificationColor: Color(0xFFEF9F27),
     ),
@@ -87,7 +107,9 @@ Future<_AppDeps> _initApp() async {
     if (onEmulator) KaivaAudioHandler.enableProxy();
   }
 
-  // flutter_downloader init
+  // flutter_downloader init — port must be registered before initialize()
+  // so callbacks that fire immediately on cold start don't get dropped.
+  initDownloadPort();
   await FlutterDownloader.initialize(debug: kDebugMode);
   await FlutterDownloader.registerCallback(downloadCallback);
 

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static vector: 5 equalizer bars, pivotY=1 so they scale from bottom -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="20dp"
+    android:viewportWidth="40"
+    android:viewportHeight="20">
+
+    <!-- Bar 1 -->
+    <group
+        android:name="bar1"
+        android:pivotX="3"
+        android:pivotY="20"
+        android:scaleY="0.6">
+        <path
+            android:fillColor="#EF9F27"
+            android:pathData="M1,4 L5,4 L5,20 L1,20 Z" />
+    </group>
+
+    <!-- Bar 2 -->
+    <group
+        android:name="bar2"
+        android:pivotX="10"
+        android:pivotY="20"
+        android:scaleY="0.9">
+        <path
+            android:fillColor="#EF9F27"
+            android:pathData="M8,2 L12,2 L12,20 L8,20 Z" />
+    </group>
+
+    <!-- Bar 3 (tallest) -->
+    <group
+        android:name="bar3"
+        android:pivotX="17"
+        android:pivotY="20"
+        android:scaleY="1.0">
+        <path
+            android:fillColor="#EF9F27"
+            android:pathData="M15,0 L19,0 L19,20 L15,20 Z" />
+    </group>
+
+    <!-- Bar 4 -->
+    <group
+        android:name="bar4"
+        android:pivotX="24"
+        android:pivotY="20"
+        android:scaleY="0.75">
+        <path
+            android:fillColor="#EF9F27"
+            android:pathData="M22,3 L26,3 L26,20 L22,20 Z" />
+    </group>
+
+    <!-- Bar 5 -->
+    <group
+        android:name="bar5"
+        android:pivotX="31"
+        android:pivotY="20"
+        android:scaleY="0.5">
+        <path
+            android:fillColor="#EF9F27"
+            android:pathData="M29,6 L33,6 L33,20 L29,20 Z" />
+    </group>
+
+</vector>

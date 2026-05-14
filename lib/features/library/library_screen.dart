@@ -1,6 +1,6 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,57 +10,87 @@ import '../../core/theme/kaiva_colors.dart';
 import '../../core/theme/kaiva_text_styles.dart';
 import '../../features/player/player_provider.dart';
 import '../../shared/widgets/loading_shimmer.dart';
-import '../../shared/widgets/song_tile.dart';
 import 'library_provider.dart';
 import 'widgets/create_playlist_sheet.dart';
+
+// ── View mode toggle ──────────────────────────────────────────
+enum _ViewMode { list, grid }
+
+final _viewModeProvider = StateProvider<_ViewMode>((_) => _ViewMode.list);
 
 class LibraryScreen extends ConsumerWidget {
   const LibraryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(libraryFilterProvider);
+    final filter   = ref.watch(libraryFilterProvider);
+    final viewMode = ref.watch(_viewModeProvider);
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            floating: true,
-            snap: true,
-            title: const Text('Library', style: KaivaTextStyles.headlineLarge),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add_rounded),
-                tooltip: 'New playlist',
-                onPressed: () => _showCreatePlaylist(context, ref),
-              ),
-            ],
-          ),
+          _buildAppBar(context, ref),
           SliverToBoxAdapter(
-            child: _FilterChips(
+            child: _FilterRow(
               selected: filter,
-              onSelect: (f) => ref.read(libraryFilterProvider.notifier).state = f,
+              viewMode: viewMode,
+              onSelect: (f) {
+                HapticFeedback.selectionClick();
+                ref.read(libraryFilterProvider.notifier).state = f;
+              },
+              onToggleView: () {
+                HapticFeedback.selectionClick();
+                ref.read(_viewModeProvider.notifier).state =
+                    viewMode == _ViewMode.list ? _ViewMode.grid : _ViewMode.list;
+              },
             ),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 8)),
-          _buildBody(context, ref, filter),
+          _SortRow(),
+          const SliverToBoxAdapter(child: SizedBox(height: 4)),
+          _buildBody(context, ref, filter, viewMode),
         ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, WidgetRef ref, LibraryFilter filter) {
+  SliverAppBar _buildAppBar(BuildContext context, WidgetRef ref) {
+    return SliverAppBar(
+      floating: true,
+      snap: true,
+      titleSpacing: 16,
+      title: const Text('Your Library', style: KaivaTextStyles.headlineLarge),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search_rounded),
+          tooltip: 'Search library',
+          onPressed: () => context.go('/search'),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add_rounded),
+          tooltip: 'Create playlist',
+          onPressed: () => _showCreatePlaylist(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    WidgetRef ref,
+    LibraryFilter filter,
+    _ViewMode viewMode,
+  ) {
     switch (filter) {
+      case LibraryFilter.playlists:
+        return _PlaylistsSliver(viewMode: viewMode);
+      case LibraryFilter.artists:
+        return _ArtistsSliver();
+      case LibraryFilter.albums:
+        return _AlbumsSliver(viewMode: viewMode);
       case LibraryFilter.liked:
         return _LikedSongsSliver();
-      case LibraryFilter.playlists:
-        return _PlaylistsSliver();
-      case LibraryFilter.artists:
-        return _TopArtistsSliver();
-      case LibraryFilter.albums:
-        return _DailyAlbumsSliver();
       case LibraryFilter.all:
-        return _AllSliver();
+        return _AllSliver(viewMode: viewMode);
     }
   }
 
@@ -74,30 +104,75 @@ class LibraryScreen extends ConsumerWidget {
   }
 }
 
-// ── Filter chips ──────────────────────────────────────────────
-class _FilterChips extends StatelessWidget {
+// ── Filter chips + view toggle row ────────────────────────────
+class _FilterRow extends StatelessWidget {
   final LibraryFilter selected;
+  final _ViewMode viewMode;
   final ValueChanged<LibraryFilter> onSelect;
+  final VoidCallback onToggleView;
 
-  const _FilterChips({required this.selected, required this.onSelect});
+  const _FilterRow({
+    required this.selected,
+    required this.viewMode,
+    required this.onSelect,
+    required this.onToggleView,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 44,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+      child: Row(
         children: [
-          _Chip(label: 'All',     isSelected: selected == LibraryFilter.all,      onTap: () => onSelect(LibraryFilter.all)),
-          const SizedBox(width: 8),
-          _Chip(label: 'Liked',   isSelected: selected == LibraryFilter.liked,    onTap: () => onSelect(LibraryFilter.liked)),
-          const SizedBox(width: 8),
-          _Chip(label: 'Playlists', isSelected: selected == LibraryFilter.playlists, onTap: () => onSelect(LibraryFilter.playlists)),
-          const SizedBox(width: 8),
-          _Chip(label: 'Artists', isSelected: selected == LibraryFilter.artists,  onTap: () => onSelect(LibraryFilter.artists)),
-          const SizedBox(width: 8),
-          _Chip(label: 'Albums',  isSelected: selected == LibraryFilter.albums,   onTap: () => onSelect(LibraryFilter.albums)),
+          Expanded(
+            child: SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _Chip(
+                    label: 'Playlists',
+                    isSelected: selected == LibraryFilter.playlists,
+                    onTap: () => onSelect(
+                      selected == LibraryFilter.playlists
+                          ? LibraryFilter.all
+                          : LibraryFilter.playlists,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _Chip(
+                    label: 'Albums',
+                    isSelected: selected == LibraryFilter.albums,
+                    onTap: () => onSelect(
+                      selected == LibraryFilter.albums
+                          ? LibraryFilter.all
+                          : LibraryFilter.albums,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _Chip(
+                    label: 'Artists',
+                    isSelected: selected == LibraryFilter.artists,
+                    onTap: () => onSelect(
+                      selected == LibraryFilter.artists
+                          ? LibraryFilter.all
+                          : LibraryFilter.artists,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              viewMode == _ViewMode.list
+                  ? Icons.grid_view_rounded
+                  : Icons.view_list_rounded,
+              size: 20,
+              color: KaivaColors.textSecondary,
+            ),
+            onPressed: onToggleView,
+          ),
         ],
       ),
     );
@@ -116,20 +191,21 @@ class _Chip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? KaivaColors.accentPrimary : KaivaColors.backgroundTertiary,
+          color: isSelected
+              ? KaivaColors.textPrimary
+              : KaivaColors.backgroundTertiary,
           borderRadius: BorderRadius.circular(50),
-          border: Border.all(
-            color: isSelected ? KaivaColors.accentPrimary : KaivaColors.borderDefault,
-            width: 0.5,
-          ),
         ),
         child: Text(
           label,
           style: KaivaTextStyles.chipLabel.copyWith(
-            color: isSelected ? KaivaColors.textOnAccent : KaivaColors.textSecondary,
+            color: isSelected
+                ? KaivaColors.backgroundPrimary
+                : KaivaColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
       ),
@@ -137,322 +213,161 @@ class _Chip extends StatelessWidget {
   }
 }
 
-// ── All — shows liked shortcut, top artists, daily albums, playlists ──
-class _AllSliver extends ConsumerWidget {
+// ── Sort row ──────────────────────────────────────────────────
+class _SortRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final liked      = ref.watch(likedSongsProvider);
-    final playlists  = ref.watch(localPlaylistsProvider);
-    final artists    = ref.watch(topArtistsProvider);
-    final albums     = ref.watch(dailyAlbumsProvider);
+    final sort = ref.watch(librarySortProvider);
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            ref.read(librarySortProvider.notifier).state =
+                sort == LibrarySortMode.recentlyAdded
+                    ? LibrarySortMode.alphabetical
+                    : LibrarySortMode.recentlyAdded;
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.swap_vert_rounded,
+                  size: 16, color: KaivaColors.textPrimary),
+              const SizedBox(width: 6),
+              Text(
+                sort == LibrarySortMode.recentlyAdded ? 'Recents' : 'A – Z',
+                style: KaivaTextStyles.titleMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── All view — Liked Songs + playlists + albums ───────────────
+class _AllSliver extends ConsumerWidget {
+  final _ViewMode viewMode;
+  const _AllSliver({required this.viewMode});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final liked     = ref.watch(likedSongsProvider);
+    final playlists = ref.watch(localPlaylistsProvider);
+    final sort      = ref.watch(librarySortProvider);
 
     return SliverList(
       delegate: SliverChildListDelegate([
-        // Liked Songs shortcut
+        // Liked Songs pinned entry
         liked.when(
           data: (songs) => songs.isEmpty
               ? const SizedBox.shrink()
-              : _LikedSongsRow(count: songs.length),
+              : _LikedSongsEntry(count: songs.length),
           loading: () => const ShimmerSongTile(),
-          error: (_, __) => const SizedBox.shrink(),
-        ),
-
-        // Top Artists section
-        artists.when(
-          data: (list) => list.isEmpty
-              ? const SizedBox.shrink()
-              : _HorizontalSection(
-                  title: 'Top Artists',
-                  subtitle: 'Your most played',
-                  onSeeAll: () => ref.read(libraryFilterProvider.notifier).state = LibraryFilter.artists,
-                  children: list.map((a) => _ArtistCard(artist: a)).toList(),
-                ),
-          loading: () => _HorizontalShimmerSection(title: 'Top Artists'),
-          error: (_, __) => const SizedBox.shrink(),
-        ),
-
-        // Daily Albums section
-        albums.when(
-          data: (list) => list.isEmpty
-              ? const SizedBox.shrink()
-              : _HorizontalSection(
-                  title: 'In Your Daily Mix',
-                  subtitle: 'Albums you played today',
-                  onSeeAll: () => ref.read(libraryFilterProvider.notifier).state = LibraryFilter.albums,
-                  children: list.map((a) => _AlbumCard(album: a)).toList(),
-                ),
-          loading: () => _HorizontalShimmerSection(title: 'In Your Daily Mix'),
           error: (_, __) => const SizedBox.shrink(),
         ),
 
         // Local playlists
         playlists.when(
-          data: (pls) => pls.isEmpty
-              ? const SizedBox.shrink()
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionHeader(title: 'Playlists', onSeeAll: null),
-                    ...pls.map((pl) => _PlaylistRow(playlist: pl)),
-                  ],
-                ),
-          loading: () => Column(children: List.generate(3, (_) => const ShimmerSongTile())),
+          data: (pls) {
+            final sorted = _sorted(pls, sort);
+            if (viewMode == _ViewMode.grid) {
+              return _PlaylistGrid(playlists: sorted);
+            }
+            return Column(
+              children: sorted
+                  .asMap()
+                  .entries
+                  .map((e) => _PlaylistEntry(playlist: e.value)
+                      .animate(delay: Duration(milliseconds: 30 * e.key))
+                      .fadeIn(duration: 200.ms))
+                  .toList(),
+            );
+          },
+          loading: () =>
+              Column(children: List.generate(4, (_) => const ShimmerSongTile())),
           error: (_, __) => const SizedBox.shrink(),
         ),
 
-        const SizedBox(height: 80),
+        const SizedBox(height: 100),
       ]),
     );
   }
-}
 
-// ── Horizontal section wrapper ────────────────────────────────
-class _HorizontalSection extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final VoidCallback? onSeeAll;
-  final List<Widget> children;
-
-  const _HorizontalSection({
-    required this.title,
-    required this.subtitle,
-    required this.children,
-    this.onSeeAll,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: title, subtitle: subtitle, onSeeAll: onSeeAll),
-        SizedBox(
-          height: 148,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: children.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, i) => children[i]
-                .animate(delay: Duration(milliseconds: 40 * i))
-                .fadeIn(duration: 200.ms)
-                .slideX(begin: 0.1, end: 0),
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
+  List<LocalPlaylist> _sorted(List<LocalPlaylist> list, LibrarySortMode sort) {
+    if (sort == LibrarySortMode.alphabetical) {
+      return [...list]..sort((a, b) => a.name.compareTo(b.name));
+    }
+    return [...list]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
   }
 }
 
-class _HorizontalShimmerSection extends StatelessWidget {
-  final String title;
-  const _HorizontalShimmerSection({required this.title});
+// ── Playlists-only view ───────────────────────────────────────
+class _PlaylistsSliver extends ConsumerWidget {
+  final _ViewMode viewMode;
+  const _PlaylistsSliver({required this.viewMode});
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: title, onSeeAll: null),
-        SizedBox(
-          height: 148,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: 5,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, __) => const _ShimmerCard(),
-          ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playlists = ref.watch(localPlaylistsProvider);
+    final sort      = ref.watch(librarySortProvider);
+    final liked     = ref.watch(likedSongsProvider);
+
+    return playlists.when(
+      loading: () => SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (_, __) => const ShimmerSongTile(),
+          childCount: 6,
         ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-}
-
-class _ShimmerCard extends StatelessWidget {
-  const _ShimmerCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 96,
-      decoration: BoxDecoration(
-        color: KaivaColors.backgroundTertiary,
-        borderRadius: BorderRadius.circular(12),
       ),
-    );
-  }
-}
+      error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      data: (pls) {
+        final sorted = [...pls];
+        if (sort == LibrarySortMode.alphabetical) {
+          sorted.sort((a, b) => a.name.compareTo(b.name));
+        } else {
+          sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+        }
 
-// ── Section header ────────────────────────────────────────────
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final VoidCallback? onSeeAll;
+        final likedCount = liked.valueOrNull?.length ?? 0;
 
-  const _SectionHeader({required this.title, this.subtitle, this.onSeeAll});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
+        if (viewMode == _ViewMode.grid) {
+          return SliverToBoxAdapter(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: KaivaTextStyles.titleLarge),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(subtitle!, style: KaivaTextStyles.bodySmall),
-                ],
+                if (likedCount > 0) _LikedSongsEntry(count: likedCount),
+                _PlaylistGrid(playlists: sorted),
+                const SizedBox(height: 100),
               ],
             ),
+          );
+        }
+
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, i) {
+              if (likedCount > 0 && i == 0) {
+                return _LikedSongsEntry(count: likedCount);
+              }
+              final idx = likedCount > 0 ? i - 1 : i;
+              if (idx >= sorted.length) return const SizedBox(height: 100);
+              return _PlaylistEntry(playlist: sorted[idx])
+                  .animate(delay: Duration(milliseconds: 30 * idx))
+                  .fadeIn(duration: 200.ms);
+            },
+            childCount: sorted.length + (likedCount > 0 ? 2 : 1),
           ),
-          if (onSeeAll != null)
-            GestureDetector(
-              onTap: onSeeAll,
-              child: Text(
-                'See all',
-                style: KaivaTextStyles.labelMedium.copyWith(
-                  color: KaivaColors.accentPrimary,
-                ),
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-// ── Artist card ───────────────────────────────────────────────
-class _ArtistCard extends StatelessWidget {
-  final TopArtistInfo artist;
-
-  const _ArtistCard({required this.artist});
-
-  @override
-  Widget build(BuildContext context) {
-    final mins = artist.totalSeconds ~/ 60;
-    final label = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}m' : '${mins}m';
-
-    return GestureDetector(
-      onTap: () => context.push('/artist/${artist.artistId}'),
-      child: SizedBox(
-        width: 96,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Circular avatar
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: KaivaColors.borderSubtle, width: 1),
-              ),
-              child: ClipOval(
-                child: CachedNetworkImage(
-                  imageUrl: artist.artworkUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    color: KaivaColors.backgroundTertiary,
-                    child: const Icon(Icons.person_rounded,
-                        color: KaivaColors.textMuted, size: 36),
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: KaivaColors.backgroundTertiary,
-                    child: const Icon(Icons.person_rounded,
-                        color: KaivaColors.textMuted, size: 36),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              artist.artistName,
-              style: KaivaTextStyles.labelMedium,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: KaivaTextStyles.bodySmall.copyWith(color: KaivaColors.textMuted),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Album card ────────────────────────────────────────────────
-class _AlbumCard extends StatelessWidget {
-  final DailyAlbumInfo album;
-
-  const _AlbumCard({required this.album});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/album/${album.albumId}'),
-      child: SizedBox(
-        width: 104,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: CachedNetworkImage(
-                imageUrl: album.artworkUrl,
-                width: 104,
-                height: 104,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  width: 104,
-                  height: 104,
-                  color: KaivaColors.backgroundTertiary,
-                  child: const Icon(Icons.album_rounded,
-                      color: KaivaColors.textMuted, size: 40),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  width: 104,
-                  height: 104,
-                  color: KaivaColors.backgroundTertiary,
-                  child: const Icon(Icons.album_rounded,
-                      color: KaivaColors.textMuted, size: 40),
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              album.albumName,
-              style: KaivaTextStyles.labelMedium,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              '${album.playCount} track${album.playCount == 1 ? '' : 's'} today',
-              style: KaivaTextStyles.bodySmall.copyWith(color: KaivaColors.textMuted),
-              maxLines: 1,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Top Artists full-page sliver ──────────────────────────────
-class _TopArtistsSliver extends ConsumerWidget {
+// ── Artists view ──────────────────────────────────────────────
+class _ArtistsSliver extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final artists = ref.watch(topArtistsProvider);
@@ -461,7 +376,7 @@ class _TopArtistsSliver extends ConsumerWidget {
       loading: () => SliverList(
         delegate: SliverChildBuilderDelegate(
           (_, __) => const ShimmerSongTile(),
-          childCount: 8,
+          childCount: 6,
         ),
       ),
       error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
@@ -477,44 +392,23 @@ class _TopArtistsSliver extends ConsumerWidget {
         return SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, i) {
-              if (i == list.length) return const SizedBox(height: 80);
+              if (i == list.length) return const SizedBox(height: 100);
               final a = list[i];
               final mins = a.totalSeconds ~/ 60;
-              final timeLabel = mins >= 60
-                  ? '${mins ~/ 60}h ${mins % 60}m listened'
-                  : '${mins}m listened';
-
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              final sub = mins >= 60
+                  ? 'Artist • ${mins ~/ 60}h ${mins % 60}m listened'
+                  : 'Artist • ${mins}m listened';
+              return _LibraryListTile(
                 leading: ClipOval(
                   child: CachedNetworkImage(
                     imageUrl: a.artworkUrl,
-                    width: 52,
-                    height: 52,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      width: 52, height: 52,
-                      color: KaivaColors.backgroundTertiary,
-                      child: const Icon(Icons.person_rounded, color: KaivaColors.textMuted),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      width: 52, height: 52,
-                      color: KaivaColors.backgroundTertiary,
-                      child: const Icon(Icons.person_rounded, color: KaivaColors.textMuted),
-                    ),
+                    width: 56, height: 56, fit: BoxFit.cover,
+                    placeholder: (_, __) => _iconBox(Icons.person_rounded, circle: true),
+                    errorWidget: (_, __, ___) => _iconBox(Icons.person_rounded, circle: true),
                   ),
                 ),
-                title: Text(a.artistName, style: KaivaTextStyles.titleMedium),
-                subtitle: Text(timeLabel, style: KaivaTextStyles.bodySmall),
-                trailing: Text(
-                  '#${i + 1}',
-                  style: KaivaTextStyles.headlineLarge.copyWith(
-                    color: i == 0
-                        ? KaivaColors.accentPrimary
-                        : KaivaColors.textMuted,
-                    fontSize: 18,
-                  ),
-                ),
+                title: a.artistName,
+                subtitle: sub,
                 onTap: () => context.push('/artist/${a.artistId}'),
               ).animate(delay: Duration(milliseconds: 30 * i)).fadeIn(duration: 200.ms);
             },
@@ -526,8 +420,11 @@ class _TopArtistsSliver extends ConsumerWidget {
   }
 }
 
-// ── Daily Albums full-page sliver ─────────────────────────────
-class _DailyAlbumsSliver extends ConsumerWidget {
+// ── Albums view ───────────────────────────────────────────────
+class _AlbumsSliver extends ConsumerWidget {
+  final _ViewMode viewMode;
+  const _AlbumsSliver({required this.viewMode});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final albums = ref.watch(dailyAlbumsProvider);
@@ -536,7 +433,7 @@ class _DailyAlbumsSliver extends ConsumerWidget {
       loading: () => SliverList(
         delegate: SliverChildBuilderDelegate(
           (_, __) => const ShimmerSongTile(),
-          childCount: 8,
+          childCount: 6,
         ),
       ),
       error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
@@ -549,37 +446,35 @@ class _DailyAlbumsSliver extends ConsumerWidget {
             ),
           );
         }
+
+        if (viewMode == _ViewMode.grid) {
+          return SliverToBoxAdapter(
+            child: Column(
+              children: [
+                _AlbumGrid(albums: list),
+                const SizedBox(height: 100),
+              ],
+            ),
+          );
+        }
+
         return SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, i) {
-              if (i == list.length) return const SizedBox(height: 80);
+              if (i == list.length) return const SizedBox(height: 100);
               final a = list[i];
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              return _LibraryListTile(
                 leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4),
                   child: CachedNetworkImage(
                     imageUrl: a.artworkUrl,
-                    width: 52,
-                    height: 52,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      width: 52, height: 52,
-                      color: KaivaColors.backgroundTertiary,
-                      child: const Icon(Icons.album_rounded, color: KaivaColors.textMuted),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      width: 52, height: 52,
-                      color: KaivaColors.backgroundTertiary,
-                      child: const Icon(Icons.album_rounded, color: KaivaColors.textMuted),
-                    ),
+                    width: 56, height: 56, fit: BoxFit.cover,
+                    placeholder: (_, __) => _iconBox(Icons.album_rounded),
+                    errorWidget: (_, __, ___) => _iconBox(Icons.album_rounded),
                   ),
                 ),
-                title: Text(a.albumName, style: KaivaTextStyles.titleMedium),
-                subtitle: Text(
-                  '${a.playCount} track${a.playCount == 1 ? '' : 's'} played today',
-                  style: KaivaTextStyles.bodySmall,
-                ),
+                title: a.albumName,
+                subtitle: 'Album • ${a.playCount} track${a.playCount == 1 ? '' : 's'} today',
                 onTap: () => context.push('/album/${a.albumId}'),
               ).animate(delay: Duration(milliseconds: 30 * i)).fadeIn(duration: 200.ms);
             },
@@ -591,7 +486,7 @@ class _DailyAlbumsSliver extends ConsumerWidget {
   }
 }
 
-// ── Liked songs section ───────────────────────────────────────
+// ── Liked songs view ──────────────────────────────────────────
 class _LikedSongsSliver extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -624,12 +519,24 @@ class _LikedSongsSliver extends ConsumerWidget {
         return SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, i) {
-              if (i == 0) return _LikedSongsHeader(songs: songs, sortMode: sortMode, ref: ref);
-              if (i == songs.length + 1) return const SizedBox(height: 80);
+              if (i == songs.length + 1) return const SizedBox(height: 100);
+              if (i == 0) {
+                return _LikedSongsHeader(songs: songs, sortMode: sortMode, ref: ref);
+              }
               final song = songs[i - 1];
               final currentSong = ref.watch(currentSongProvider).valueOrNull;
-              return SongTile(
-                song: song,
+              return _LibraryListTile(
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: CachedNetworkImage(
+                    imageUrl: song.artworkUrl,
+                    width: 56, height: 56, fit: BoxFit.cover,
+                    placeholder: (_, __) => _iconBox(Icons.music_note_rounded),
+                    errorWidget: (_, __, ___) => _iconBox(Icons.music_note_rounded),
+                  ),
+                ),
+                title: song.title,
+                subtitle: song.artist,
                 isPlaying: currentSong?.id == song.id,
                 onTap: () => ref.read(audioHandlerProvider).playQueue(songs, i - 1),
               ).animate(delay: Duration(milliseconds: 30 * (i - 1))).fadeIn(duration: 200.ms);
@@ -656,7 +563,7 @@ class _LikedSongsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: Row(
         children: [
           Expanded(
@@ -671,36 +578,37 @@ class _LikedSongsHeader extends StatelessWidget {
             child: _ActionButton(
               icon: Icons.shuffle_rounded,
               label: 'Shuffle',
-              onTap: () async {
-                final handler = ref.read(audioHandlerProvider);
-                await handler.setShuffleMode(AudioServiceShuffleMode.all);
-                await handler.playQueue(songs, 0);
-              },
+              onTap: () => ref.read(audioHandlerProvider).playQueue(songs, 0),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 6),
           PopupMenuButton<LibrarySortMode>(
             icon: const Icon(Icons.sort_rounded, color: KaivaColors.textMuted, size: 20),
             color: KaivaColors.backgroundSecondary,
-            onSelected: (mode) => ref.read(librarySortProvider.notifier).state = mode,
+            onSelected: (mode) =>
+                ref.read(librarySortProvider.notifier).state = mode,
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: LibrarySortMode.recentlyAdded,
-                child: Text('Recently Added',
-                    style: KaivaTextStyles.bodyMedium.copyWith(
-                      color: sortMode == LibrarySortMode.recentlyAdded
-                          ? KaivaColors.accentPrimary
-                          : KaivaColors.textPrimary,
-                    )),
+                child: Text(
+                  'Recently Added',
+                  style: KaivaTextStyles.bodyMedium.copyWith(
+                    color: sortMode == LibrarySortMode.recentlyAdded
+                        ? KaivaColors.accentPrimary
+                        : KaivaColors.textPrimary,
+                  ),
+                ),
               ),
               PopupMenuItem(
                 value: LibrarySortMode.alphabetical,
-                child: Text('A – Z',
-                    style: KaivaTextStyles.bodyMedium.copyWith(
-                      color: sortMode == LibrarySortMode.alphabetical
-                          ? KaivaColors.accentPrimary
-                          : KaivaColors.textPrimary,
-                    )),
+                child: Text(
+                  'A – Z',
+                  style: KaivaTextStyles.bodyMedium.copyWith(
+                    color: sortMode == LibrarySortMode.alphabetical
+                        ? KaivaColors.accentPrimary
+                        : KaivaColors.textPrimary,
+                  ),
+                ),
               ),
             ],
           ),
@@ -741,107 +649,244 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// ── Playlists section ─────────────────────────────────────────
-class _PlaylistsSliver extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final playlists = ref.watch(localPlaylistsProvider);
-
-    return playlists.when(
-      loading: () => SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (_, __) => const ShimmerSongTile(),
-          childCount: 5,
-        ),
-      ),
-      error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
-      data: (pls) {
-        if (pls.isEmpty) {
-          return const SliverFillRemaining(
-            child: _EmptyLibrary(
-              icon: Icons.queue_music_outlined,
-              message: 'No playlists yet.\nTap + to create one.',
-            ),
-          );
-        }
-        return SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, i) {
-              if (i == pls.length) return const SizedBox(height: 80);
-              return _PlaylistRow(playlist: pls[i])
-                  .animate(delay: Duration(milliseconds: 30 * i))
-                  .fadeIn(duration: 200.ms);
-            },
-            childCount: pls.length + 1,
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ── Liked songs shortcut row ──────────────────────────────────
-class _LikedSongsRow extends ConsumerWidget {
+// ── Liked Songs pinned entry ──────────────────────────────────
+class _LikedSongsEntry extends ConsumerWidget {
   final int count;
-  const _LikedSongsRow({required this.count});
+  const _LikedSongsEntry({required this.count});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    return _LibraryListTile(
       leading: Container(
-        width: 52,
-        height: 52,
+        width: 56,
+        height: 56,
         decoration: BoxDecoration(
-          color: KaivaColors.accentPrimary.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF4B3FA0), Color(0xFF8B5CF6)],
+          ),
+          borderRadius: BorderRadius.circular(4),
         ),
-        child: const Icon(Icons.favorite_rounded, color: KaivaColors.accentPrimary, size: 28),
+        child: const Icon(Icons.favorite_rounded, color: KaivaColors.textOnAccent, size: 28),
       ),
-      title: const Text('Liked Songs', style: KaivaTextStyles.titleMedium),
-      subtitle: Text('$count song${count == 1 ? '' : 's'}', style: KaivaTextStyles.bodySmall),
+      title: 'Liked Songs',
+      subtitle: 'Playlist • $count song${count == 1 ? '' : 's'}',
+      isPinned: true,
       onTap: () => ref.read(libraryFilterProvider.notifier).state = LibraryFilter.liked,
     );
   }
 }
 
-// ── Playlist row ──────────────────────────────────────────────
-class _PlaylistRow extends StatelessWidget {
+// ── Playlist entry ────────────────────────────────────────────
+class _PlaylistEntry extends StatelessWidget {
   final LocalPlaylist playlist;
-  const _PlaylistRow({required this.playlist});
+  const _PlaylistEntry({required this.playlist});
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    return _LibraryListTile(
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
         child: playlist.coverSource != null
             ? CachedNetworkImage(
                 imageUrl: playlist.coverSource!,
-                width: 52, height: 52, fit: BoxFit.cover,
-                placeholder: (_, __) => _PlaceholderCover(),
-                errorWidget: (_, __, ___) => _PlaceholderCover(),
+                width: 56, height: 56, fit: BoxFit.cover,
+                placeholder: (_, __) => _iconBox(Icons.queue_music_outlined),
+                errorWidget: (_, __, ___) => _iconBox(Icons.queue_music_outlined),
               )
-            : _PlaceholderCover(),
+            : _iconBox(Icons.queue_music_outlined),
       ),
-      title: Text(playlist.name, style: KaivaTextStyles.titleMedium),
-      subtitle: Text(
-        '${playlist.songCount} song${playlist.songCount == 1 ? '' : 's'}',
-        style: KaivaTextStyles.bodySmall,
-      ),
+      title: playlist.name,
+      subtitle: 'Playlist • ${playlist.songCount} song${playlist.songCount == 1 ? '' : 's'}',
       onTap: () => context.push('/local-playlist/${playlist.id}'),
     );
   }
 }
 
-class _PlaceholderCover extends StatelessWidget {
+// ── Shared list tile ──────────────────────────────────────────
+class _LibraryListTile extends StatelessWidget {
+  final Widget leading;
+  final String title;
+  final String subtitle;
+  final bool isPinned;
+  final bool isPlaying;
+  final VoidCallback onTap;
+
+  const _LibraryListTile({
+    required this.leading,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.isPinned = false,
+    this.isPlaying = false,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 52, height: 52,
-      color: KaivaColors.backgroundTertiary,
-      child: const Icon(Icons.queue_music_outlined, color: KaivaColors.textMuted, size: 24),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            leading,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      if (isPinned) ...[
+                        const Icon(Icons.push_pin_rounded,
+                            size: 12, color: KaivaColors.accentPrimary),
+                        const SizedBox(width: 4),
+                      ],
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: KaivaTextStyles.titleMedium.copyWith(
+                            color: isPlaying
+                                ? KaivaColors.accentPrimary
+                                : KaivaColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: KaivaTextStyles.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Playlist grid ─────────────────────────────────────────────
+class _PlaylistGrid extends StatelessWidget {
+  final List<LocalPlaylist> playlists;
+  const _PlaylistGrid({required this.playlists});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.85,
+        ),
+        itemCount: playlists.length,
+        itemBuilder: (context, i) {
+          final pl = playlists[i];
+          return GestureDetector(
+            onTap: () => context.push('/local-playlist/${pl.id}'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: pl.coverSource != null
+                        ? CachedNetworkImage(
+                            imageUrl: pl.coverSource!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            placeholder: (_, __) =>
+                                _iconBox(Icons.queue_music_outlined, size: double.infinity),
+                            errorWidget: (_, __, ___) =>
+                                _iconBox(Icons.queue_music_outlined, size: double.infinity),
+                          )
+                        : _iconBox(Icons.queue_music_outlined, size: double.infinity),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(pl.name,
+                    style: KaivaTextStyles.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                Text('${pl.songCount} songs',
+                    style: KaivaTextStyles.bodySmall,
+                    maxLines: 1),
+              ],
+            ),
+          ).animate(delay: Duration(milliseconds: 40 * i)).fadeIn(duration: 200.ms);
+        },
+      ),
+    );
+  }
+}
+
+// ── Album grid ────────────────────────────────────────────────
+class _AlbumGrid extends StatelessWidget {
+  final List<DailyAlbumInfo> albums;
+  const _AlbumGrid({required this.albums});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.85,
+        ),
+        itemCount: albums.length,
+        itemBuilder: (context, i) {
+          final a = albums[i];
+          return GestureDetector(
+            onTap: () => context.push('/album/${a.albumId}'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: CachedNetworkImage(
+                      imageUrl: a.artworkUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (_, __) =>
+                          _iconBox(Icons.album_rounded, size: double.infinity),
+                      errorWidget: (_, __, ___) =>
+                          _iconBox(Icons.album_rounded, size: double.infinity),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(a.albumName,
+                    style: KaivaTextStyles.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                Text('${a.playCount} tracks today',
+                    style: KaivaTextStyles.bodySmall,
+                    maxLines: 1),
+              ],
+            ),
+          ).animate(delay: Duration(milliseconds: 40 * i)).fadeIn(duration: 200.ms);
+        },
+      ),
     );
   }
 }
@@ -861,9 +906,24 @@ class _EmptyLibrary extends StatelessWidget {
         children: [
           Icon(icon, size: 52, color: KaivaColors.textMuted),
           const SizedBox(height: 16),
-          Text(message, style: KaivaTextStyles.bodyMedium, textAlign: TextAlign.center),
+          Text(message,
+              style: KaivaTextStyles.bodyMedium, textAlign: TextAlign.center),
         ],
       ),
     );
   }
+}
+
+// ── Shared icon placeholder box ───────────────────────────────
+Widget _iconBox(IconData icon, {double size = 56.0, bool circle = false}) {
+  return Container(
+    width: size == double.infinity ? null : size,
+    height: size == double.infinity ? null : size,
+    decoration: BoxDecoration(
+      color: KaivaColors.backgroundTertiary,
+      shape: circle ? BoxShape.circle : BoxShape.rectangle,
+      borderRadius: circle ? null : BorderRadius.circular(4),
+    ),
+    child: Icon(icon, color: KaivaColors.textMuted, size: 24),
+  );
 }

@@ -20,11 +20,11 @@ class OfflineBanner extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.wifi_off_rounded, size: 14, color: Colors.white),
+          const Icon(Icons.wifi_off_rounded, size: 14, color: KaivaColors.textOnAccent),
           const SizedBox(width: 6),
           Text(
             'No internet connection',
-            style: KaivaTextStyles.labelMedium.copyWith(color: Colors.white),
+            style: KaivaTextStyles.labelMedium.copyWith(color: KaivaColors.textOnAccent),
           ),
         ],
       ),

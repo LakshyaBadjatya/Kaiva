@@ -61,7 +61,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final crossfade = ref.watch(crossfadeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings', style: KaivaTextStyles.headlineLarge)),
+      appBar: AppBar(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset('assets/images/kaiva_logo.png', width: 28, height: 28, fit: BoxFit.cover),
+            ),
+            const SizedBox(width: 10),
+            const Text('Settings', style: KaivaTextStyles.headlineLarge),
+          ],
+        ),
+      ),
       body: ListView(
         children: [
 
@@ -69,84 +81,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const _Header('Account'),
           _AccountTile(nameCtrl: _nameCtrl),
 
+          // ── Import ───────────────────────────────────────
+          const _Header('Import'),
+          ListTile(
+            leading: const Icon(Icons.library_music_outlined, color: KaivaColors.textMuted, size: 22),
+            title: const Text('Import from Spotify', style: KaivaTextStyles.bodyMedium),
+            subtitle: const Text('Import playlists & liked songs from Spotify', style: KaivaTextStyles.bodySmall),
+            trailing: const Icon(Icons.chevron_right_rounded, color: KaivaColors.textMuted),
+            onTap: () => context.push('/settings/spotify-import'),
+          ),
+
           // ── Appearance ───────────────────────────────────
           const _Header('Appearance'),
-          ListTile(
-            title: const Text('Theme', style: KaivaTextStyles.bodyMedium),
-            trailing: DropdownButton<ThemeMode>(
-              value: themeMode,
-              underline: const SizedBox.shrink(),
-              dropdownColor: KaivaColors.backgroundSecondary,
-              style: KaivaTextStyles.bodyMedium.copyWith(color: KaivaColors.textPrimary),
-              items: const [
-                DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-              ],
-              onChanged: (m) => m != null
-                  ? ref.read(themeModeProvider.notifier).setMode(m)
-                  : null,
-            ),
+          _DropdownTile<ThemeMode>(
+            label: 'Theme',
+            value: themeMode,
+            items: const [
+              DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+              DropdownMenuItem(value: ThemeMode.dark,   child: Text('Dark')),
+              DropdownMenuItem(value: ThemeMode.light,  child: Text('Light')),
+            ],
+            onChanged: (m) => m != null ? ref.read(themeModeProvider.notifier).setMode(m) : null,
           ),
 
           // ── Playback ─────────────────────────────────────
           const _Header('Playback'),
-          ListTile(
-            title: const Text('Stream Quality', style: KaivaTextStyles.bodyMedium),
-            trailing: DropdownButton<String>(
-              value: streamQuality,
-              underline: const SizedBox.shrink(),
-              dropdownColor: KaivaColors.backgroundSecondary,
-              style: KaivaTextStyles.bodyMedium.copyWith(color: KaivaColors.textPrimary),
-              items: const [
-                DropdownMenuItem(value: '128', child: Text('128 kbps')),
-                DropdownMenuItem(value: '160', child: Text('160 kbps')),
-                DropdownMenuItem(value: '320', child: Text('320 kbps')),
-              ],
-              onChanged: (v) => v != null
-                  ? ref.read(streamQualityProvider.notifier).set(v)
-                  : null,
-            ),
+          _DropdownTile<String>(
+            label: 'Stream Quality',
+            value: streamQuality,
+            items: const [
+              DropdownMenuItem(value: '128', child: Text('128 kbps')),
+              DropdownMenuItem(value: '160', child: Text('160 kbps')),
+              DropdownMenuItem(value: '320', child: Text('320 kbps')),
+            ],
+            onChanged: (v) => v != null ? ref.read(streamQualityProvider.notifier).set(v) : null,
           ),
-          ListTile(
-            title: const Text('Crossfade', style: KaivaTextStyles.bodyMedium),
-            subtitle: Text(
-              crossfade == 0 ? 'Off' : '$crossfade seconds',
-              style: KaivaTextStyles.bodySmall,
-            ),
-            trailing: SizedBox(
-              width: 150,
-              child: Slider(
-                value: crossfade.toDouble(),
-                min: 0,
-                max: 12,
-                divisions: 12,
-                activeColor: KaivaColors.accentPrimary,
-                inactiveColor: KaivaColors.backgroundTertiary,
-                onChanged: (v) {
-                    final secs = v.round();
-                    ref.read(crossfadeProvider.notifier).set(secs);
-                    ref.read(audioHandlerProvider).setCrossfade(secs);
-                  },
-              ),
-            ),
+          _SliderTile(
+            label: 'Crossfade',
+            valueLabel: crossfade == 0 ? 'Off' : '$crossfade s',
+            value: crossfade.toDouble(),
+            min: 0, max: 12, divisions: 12,
+            onChanged: (v) {
+              final secs = v.round();
+              ref.read(crossfadeProvider.notifier).set(secs);
+              ref.read(audioHandlerProvider).setCrossfade(secs);
+            },
           ),
           SwitchListTile(
             title: const Text('Gapless Playback', style: KaivaTextStyles.bodyMedium),
             value: gapless,
-            activeThumbColor: KaivaColors.accentPrimary,
-            onChanged: (v) => ref.read(gaplessPlaybackProvider.notifier).set(v),
+            onChanged: (v) {
+              ref.read(gaplessPlaybackProvider.notifier).set(v);
+              ref.read(audioHandlerProvider).setGapless(v);
+            },
           ),
           SwitchListTile(
             title: const Text('Volume Normalization', style: KaivaTextStyles.bodyMedium),
             value: normalize,
-            activeThumbColor: KaivaColors.accentPrimary,
             onChanged: (v) => ref.read(volumeNormalizeProvider.notifier).set(v),
           ),
           SwitchListTile(
             title: const Text('Mono Audio', style: KaivaTextStyles.bodyMedium),
             value: mono,
-            activeThumbColor: KaivaColors.accentPrimary,
             onChanged: (v) => ref.read(monoAudioProvider.notifier).set(v),
           ),
           ListTile(
@@ -157,47 +153,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           // ── Downloads ────────────────────────────────────
           const _Header('Downloads'),
-          ListTile(
-            title: const Text('Download Quality', style: KaivaTextStyles.bodyMedium),
-            trailing: DropdownButton<String>(
-              value: downloadQuality,
-              underline: const SizedBox.shrink(),
-              dropdownColor: KaivaColors.backgroundSecondary,
-              style: KaivaTextStyles.bodyMedium.copyWith(color: KaivaColors.textPrimary),
-              items: const [
-                DropdownMenuItem(value: '128', child: Text('128 kbps')),
-                DropdownMenuItem(value: '160', child: Text('160 kbps')),
-                DropdownMenuItem(value: '320', child: Text('320 kbps')),
-              ],
-              onChanged: (v) => v != null
-                  ? ref.read(downloadQualityProvider.notifier).set(v)
-                  : null,
-            ),
+          _DropdownTile<String>(
+            label: 'Download Quality',
+            value: downloadQuality,
+            items: const [
+              DropdownMenuItem(value: '128', child: Text('128 kbps')),
+              DropdownMenuItem(value: '160', child: Text('160 kbps')),
+              DropdownMenuItem(value: '320', child: Text('320 kbps')),
+            ],
+            onChanged: (v) => v != null ? ref.read(downloadQualityProvider.notifier).set(v) : null,
           ),
-          ListTile(
-            title: const Text('Storage Limit', style: KaivaTextStyles.bodyMedium),
-            subtitle: Text(
-              storageLimit >= 1024 ? '${(storageLimit / 1024).round()} GB' : '$storageLimit MB',
-              style: KaivaTextStyles.bodySmall,
-            ),
-            trailing: SizedBox(
-              width: 150,
-              child: Slider(
-                value: storageLimit.toDouble(),
-                min: 256,
-                max: 8192,
-                divisions: 31,
-                activeColor: KaivaColors.accentPrimary,
-                inactiveColor: KaivaColors.backgroundTertiary,
-                onChanged: (v) =>
-                    ref.read(storageLimitProvider.notifier).set(v.round()),
-              ),
-            ),
+          _SliderTile(
+            label: 'Storage Limit',
+            valueLabel: storageLimit >= 1024
+                ? '${(storageLimit / 1024).round()} GB'
+                : '$storageLimit MB',
+            value: storageLimit.toDouble(),
+            min: 256, max: 8192, divisions: 31,
+            onChanged: (v) => ref.read(storageLimitProvider.notifier).set(v.round()),
           ),
           SwitchListTile(
             title: const Text('Wi-Fi Only Downloads', style: KaivaTextStyles.bodyMedium),
             value: wifiOnly,
-            activeThumbColor: KaivaColors.accentPrimary,
             onChanged: (v) => ref.read(wifiOnlyProvider.notifier).set(v),
           ),
           ListTile(
@@ -541,6 +518,98 @@ class _ApiUrlTileState extends ConsumerState<_ApiUrlTile> {
                     style: TextStyle(color: KaivaColors.textMuted)),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Dropdown tile — label left, dropdown right, aligned ──────
+class _DropdownTile<T> extends StatelessWidget {
+  final String label;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  const _DropdownTile({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: KaivaTextStyles.bodyMedium),
+          ),
+          DropdownButton<T>(
+            value: value,
+            underline: const SizedBox.shrink(),
+            dropdownColor: KaivaColors.backgroundSecondary,
+            style: KaivaTextStyles.bodyMedium.copyWith(color: KaivaColors.textPrimary),
+            items: items,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Slider tile — label + value label, full-width slider below ─
+class _SliderTile extends StatelessWidget {
+  final String label;
+  final String valueLabel;
+  final double value;
+  final double min;
+  final double max;
+  final int divisions;
+  final ValueChanged<double> onChanged;
+
+  const _SliderTile({
+    required this.label,
+    required this.valueLabel,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(label, style: KaivaTextStyles.bodyMedium)),
+              Text(valueLabel, style: KaivaTextStyles.bodySmall),
+            ],
+          ),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 2,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            ),
+            child: Slider(
+              value: value,
+              min: min,
+              max: max,
+              divisions: divisions,
+              activeColor: KaivaColors.accentPrimary,
+              inactiveColor: KaivaColors.backgroundTertiary,
+              onChanged: onChanged,
+            ),
           ),
         ],
       ),

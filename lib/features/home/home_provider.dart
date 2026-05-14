@@ -9,6 +9,7 @@ import '../../core/models/album.dart';
 import '../../core/models/playlist.dart';
 import '../../core/models/artist.dart';
 import '../../core/utils/settings_keys.dart';
+import '../../providers/connectivity_provider.dart';
 
 // ── Continue Listening ────────────────────────────────────────
 final continueListeningProvider = StreamProvider<List<Song>>((ref) {
@@ -53,7 +54,21 @@ class HomeFeed {
 // ── Home feed provider ────────────────────────────────────────
 final homeFeedProvider =
     FutureProvider.family<HomeFeed, String>((ref, language) async {
-  ref.keepAlive(); // prevent Riverpod from auto-discarding on error → no infinite retry
+  ref.keepAlive();
+  final isOnline = ref.watch(isOnlineProvider);
+  final db = ref.watch(databaseProvider);
+
+  // No connectivity at all — go straight to local DB
+  if (!isOnline) {
+    final downloaded = await db.songsDao.getDownloadedSongs();
+    final liked = await db.likedSongsDao.watchLikedSongs().first;
+    final localSongs = {
+      ...downloaded.toModels(),
+      ...liked.toModels(),
+    }.toList();
+    return HomeFeed(trending: localSongs.take(20).toList());
+  }
+
   final api = ApiClient.instance();
 
   List<Song> parseSongs(dynamic raw) {
@@ -88,10 +103,15 @@ final homeFeedProvider =
     }).whereType<Artist>().toList();
   }
 
+  // "All" uses a comma-joined list of major languages for the modules endpoint
+  final apiLanguage = language == 'all'
+      ? 'hindi,english,punjabi,tamil,telugu'
+      : language;
+
   // Try /api/modules first; fall back to search-based trending if 404
   try {
     final response = await api.get(
-      ApiEndpoints.trending, params: {'language': language},
+      ApiEndpoints.trending, params: {'language': apiLanguage},
     );
     final data = (response.data as Map<String, dynamic>?)?['data']
         as Map<String, dynamic>? ?? {};
@@ -123,6 +143,7 @@ final homeFeedProvider =
 
   // Fallback: build home feed from search queries per language
   final trendingQuery = switch (language) {
+    'all'      => 'top hits 2025',
     'hindi'    => 'hindi hits 2025',
     'tamil'    => 'tamil hits 2025',
     'telugu'   => 'telugu hits 2025',
@@ -137,12 +158,13 @@ final homeFeedProvider =
   // Wrap each request so a single timeout doesn't block the rest
   Future<dynamic> safe(Future<dynamic> f) => f.catchError((_) => null);
 
+  final langLabel = language == 'all' ? 'indian' : language;
   final results = await Future.wait([
     safe(api.get(ApiEndpoints.searchSongs, params: {'query': trendingQuery, 'limit': '10'})),
-    safe(api.get(ApiEndpoints.searchSongs, params: {'query': 'new $language songs 2025', 'limit': '10'})),
+    safe(api.get(ApiEndpoints.searchSongs, params: {'query': 'new $langLabel songs 2025', 'limit': '10'})),
     safe(api.get(ApiEndpoints.searchAlbums, params: {'query': trendingQuery, 'limit': '6'})),
-    safe(api.get(ApiEndpoints.searchArtists, params: {'query': '$language artists', 'limit': '8'})),
-    safe(api.get(ApiEndpoints.searchPlaylists, params: {'query': '$language top', 'limit': '6'})),
+    safe(api.get(ApiEndpoints.searchArtists, params: {'query': '$langLabel artists', 'limit': '8'})),
+    safe(api.get(ApiEndpoints.searchPlaylists, params: {'query': '$langLabel top', 'limit': '6'})),
   ]);
 
   List<Song> extractSongs(dynamic resp) {
@@ -173,9 +195,18 @@ final homeFeedProvider =
     popularArtists:    extractArtists(results[3]).take(8).toList(),
   );
 
-  // If everything timed out, throw so the error state shows instead of blank feed
+  // API returned nothing — fall back to local DB before giving up
   if (feed.trending.isEmpty && feed.newReleases.isEmpty &&
       feed.featuredPlaylists.isEmpty && feed.popularArtists.isEmpty) {
+    final downloaded = await db.songsDao.getDownloadedSongs();
+    final liked = await db.likedSongsDao.watchLikedSongs().first;
+    final localSongs = {
+      ...downloaded.toModels(),
+      ...liked.toModels(),
+    }.toList();
+    if (localSongs.isNotEmpty) {
+      return HomeFeed(trending: localSongs.take(20).toList());
+    }
     throw Exception('No content available. Make sure the proxy is running.');
   }
 

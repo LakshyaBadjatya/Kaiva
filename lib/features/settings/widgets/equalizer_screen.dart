@@ -137,7 +137,6 @@ class _EqBody extends StatelessWidget {
         SwitchListTile(
           title: const Text('Enable Equalizer', style: KaivaTextStyles.bodyMedium),
           value: enabled,
-          activeThumbColor: KaivaColors.accentPrimary,
           onChanged: onToggle,
           contentPadding: EdgeInsets.zero,
         ),

@@ -8,20 +8,10 @@ import '../../core/theme/kaiva_text_styles.dart';
 import '../../features/player/player_provider.dart';
 import '../../core/utils/song_loader.dart';
 import '../../shared/widgets/loading_shimmer.dart';
+import '../../shared/widgets/waveform_animation.dart';
 import 'search_provider.dart';
 import 'widgets/search_song_tile.dart';
 
-// Browse category data
-const _categories = [
-  (label: 'Bollywood',  icon: Icons.movie_outlined,      color: Color(0xFFE91E63)),
-  (label: 'Pop',        icon: Icons.music_note_outlined,  color: Color(0xFF9C27B0)),
-  (label: 'Rock',       icon: Icons.electric_bolt,        color: Color(0xFF3F51B5)),
-  (label: 'Hip-Hop',    icon: Icons.headphones_outlined,  color: Color(0xFF009688)),
-  (label: 'Classical',  icon: Icons.piano_outlined,       color: Color(0xFFFF5722)),
-  (label: 'Devotional', icon: Icons.spa_outlined,         color: Color(0xFFFF9800)),
-  (label: 'Punjabi',    icon: Icons.celebration_outlined, color: Color(0xFF4CAF50)),
-  (label: 'Romance',    icon: Icons.favorite_border,      color: Color(0xFFF44336)),
-];
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -83,23 +73,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 child: !_isActive
                     ? _IdleView(
                         key: const ValueKey('idle'),
-                        recent: recent,
-                        onRecentTap: (q) {
-                          _controller.text = q;
-                          _onQueryChanged(q);
-                          _focusNode.unfocus();
-                          context.push('/search/results?q=${Uri.encodeComponent(q)}');
+                        recentSongs: recent,
+                        onRecentSongTap: (song) async {
+                          ref.read(recentSearchSongsProvider.notifier).add(song);
+                          final fresh = await fetchFreshQueue([song]);
+                          ref.read(audioHandlerProvider).playQueue(fresh, 0);
                         },
-                        onRecentDelete: (q) =>
-                            ref.read(recentSearchesProvider.notifier).remove(q),
+                        onRecentDelete: (id) =>
+                            ref.read(recentSearchSongsProvider.notifier).remove(id),
                         onClearAll: () =>
-                            ref.read(recentSearchesProvider.notifier).clear(),
-                        onCategoryTap: (label) {
-                          _controller.text = label;
-                          _onQueryChanged(label);
-                          _focusNode.unfocus();
-                          context.push('/search/results?q=${Uri.encodeComponent(label)}');
-                        },
+                            ref.read(recentSearchSongsProvider.notifier).clear(),
                       )
                     : searchState.when(
                         data: (result) {
@@ -188,80 +171,65 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-// ── Idle: recent + browse grid ────────────────────────────────
+// ── Idle: recent songs ────────────────────────────────────────
 class _IdleView extends StatelessWidget {
-  final List<String> recent;
-  final ValueChanged<String> onRecentTap;
+  final List<Song> recentSongs;
+  final ValueChanged<Song> onRecentSongTap;
   final ValueChanged<String> onRecentDelete;
   final VoidCallback onClearAll;
-  final ValueChanged<String> onCategoryTap;
 
   const _IdleView({
     super.key,
-    required this.recent,
-    required this.onRecentTap,
+    required this.recentSongs,
+    required this.onRecentSongTap,
     required this.onRecentDelete,
     required this.onClearAll,
-    required this.onCategoryTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (recentSongs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.history_rounded, size: 48, color: KaivaColors.textMuted),
+            const SizedBox(height: 12),
+            Text(
+              'Songs you play from search\nwill appear here',
+              style: KaivaTextStyles.bodyMedium.copyWith(color: KaivaColors.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        if (recent.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Recent', style: KaivaTextStyles.sectionHeader),
-              TextButton(
-                onPressed: onClearAll,
-                child: Text(
-                  'Clear all',
-                  style: KaivaTextStyles.bodySmall.copyWith(
-                    color: KaivaColors.textMuted,
-                  ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Recent', style: KaivaTextStyles.sectionHeader),
+            TextButton(
+              onPressed: onClearAll,
+              child: Text(
+                'Clear all',
+                style: KaivaTextStyles.bodySmall.copyWith(
+                  color: KaivaColors.textMuted,
                 ),
               ),
-            ],
-          ),
-          ...recent.map(
-            (q) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.history_rounded, color: KaivaColors.textMuted, size: 20),
-              title: Text(q, style: KaivaTextStyles.bodyMedium),
-              trailing: IconButton(
-                icon: const Icon(Icons.close_rounded, size: 16, color: KaivaColors.textMuted),
-                onPressed: () => onRecentDelete(q),
-              ),
-              onTap: () => onRecentTap(q),
             ),
+          ],
+        ),
+        ...recentSongs.map(
+          (song) => _RecentSongRow(
+            song: song,
+            onTap: () => onRecentSongTap(song),
+            onDelete: () => onRecentDelete(song.id),
           ),
-          const SizedBox(height: 16),
-        ],
-        const Text('Browse categories', style: KaivaTextStyles.sectionHeader),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 2.2,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: _categories.length,
-          itemBuilder: (context, i) {
-            final cat = _categories[i];
-            return _CategoryTile(
-              label: cat.label,
-              icon: cat.icon,
-              color: cat.color,
-              onTap: () => onCategoryTap(cat.label),
-            );
-          },
         ),
         const SizedBox(height: 80),
       ],
@@ -269,44 +237,74 @@ class _IdleView extends StatelessWidget {
   }
 }
 
-class _CategoryTile extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
+class _RecentSongRow extends ConsumerWidget {
+  final Song song;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
-  const _CategoryTile({
-    required this.label,
-    required this.icon,
-    required this.color,
+  const _RecentSongRow({
+    required this.song,
     required this.onTap,
+    required this.onDelete,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                style: KaivaTextStyles.bodyMedium.copyWith(color: color),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentSong = ref.watch(currentSongProvider).valueOrNull;
+    final isCurrentSong = currentSong?.id == song.id;
+    final isPlaying = isCurrentSong && ref.watch(isPlayingProvider);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 2),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: CachedNetworkImage(
+          imageUrl: song.artworkUrl,
+          width: 44,
+          height: 44,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(
+            width: 44,
+            height: 44,
+            color: KaivaColors.backgroundTertiary,
+            child: const Icon(Icons.music_note_rounded, size: 20, color: KaivaColors.textMuted),
+          ),
+          errorWidget: (_, __, ___) => Container(
+            width: 44,
+            height: 44,
+            color: KaivaColors.backgroundTertiary,
+            child: const Icon(Icons.music_note_rounded, size: 20, color: KaivaColors.textMuted),
+          ),
         ),
       ),
+      title: Text(
+        song.title,
+        style: KaivaTextStyles.bodyMedium.copyWith(
+          color: isCurrentSong ? KaivaColors.accentPrimary : KaivaColors.textPrimary,
+        ),
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        song.artist,
+        style: KaivaTextStyles.bodySmall.copyWith(color: KaivaColors.textMuted),
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: isCurrentSong
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                WaveformAnimation(isPlaying: isPlaying),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 16, color: KaivaColors.textMuted),
+                  onPressed: onDelete,
+                ),
+              ],
+            )
+          : IconButton(
+              icon: const Icon(Icons.close_rounded, size: 16, color: KaivaColors.textMuted),
+              onPressed: onDelete,
+            ),
+      onTap: onTap,
     );
   }
 }

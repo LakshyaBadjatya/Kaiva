@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:drawable="@drawable/vd_waveform">
+
+    <!-- Bar 1 -->
+    <target android:name="bar1">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="scaleY"
+                android:duration="600"
+                android:repeatCount="infinite"
+                android:repeatMode="reverse"
+                android:interpolator="@android:interpolator/accelerate_decelerate"
+                android:valueFrom="1.0"
+                android:valueTo="0.2"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+
+    <!-- Bar 2 — offset phase -->
+    <target android:name="bar2">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:propertyName="scaleY"
+                    android:startOffset="120"
+                    android:duration="600"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:interpolator="@android:interpolator/accelerate_decelerate"
+                    android:valueFrom="0.4"
+                    android:valueTo="1.0"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <!-- Bar 3 — tallest, offset phase -->
+    <target android:name="bar3">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:propertyName="scaleY"
+                    android:startOffset="240"
+                    android:duration="500"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:interpolator="@android:interpolator/accelerate_decelerate"
+                    android:valueFrom="1.0"
+                    android:valueTo="0.3"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <!-- Bar 4 -->
+    <target android:name="bar4">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:propertyName="scaleY"
+                    android:startOffset="80"
+                    android:duration="700"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:interpolator="@android:interpolator/accelerate_decelerate"
+                    android:valueFrom="0.5"
+                    android:valueTo="1.0"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+    <!-- Bar 5 -->
+    <target android:name="bar5">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:propertyName="scaleY"
+                    android:startOffset="300"
+                    android:duration="650"
+                    android:repeatCount="infinite"
+                    android:repeatMode="reverse"
+                    android:interpolator="@android:interpolator/accelerate_decelerate"
+                    android:valueFrom="1.0"
+                    android:valueTo="0.25"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+
+</animated-vector>

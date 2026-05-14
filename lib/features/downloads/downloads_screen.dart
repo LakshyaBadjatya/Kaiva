@@ -73,7 +73,7 @@ class DownloadsScreen extends ConsumerWidget {
                         color: KaivaColors.error,
                         child: const Icon(
                           Icons.delete_outline_rounded,
-                          color: Colors.white,
+                          color: KaivaColors.textOnAccent,
                         ),
                       ),
                       onDismissed: (_) => ref

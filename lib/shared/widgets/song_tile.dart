@@ -6,7 +6,9 @@ import '../../core/models/song.dart';
 import '../../core/theme/kaiva_colors.dart';
 import '../../core/theme/kaiva_text_styles.dart';
 import '../../features/downloads/download_manager.dart';
+import '../../features/player/player_provider.dart';
 import 'album_art.dart';
+import 'waveform_animation.dart';
 
 class SongTile extends ConsumerWidget {
   final Song song;
@@ -84,9 +86,13 @@ class SongTile extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 4),
-              Text(song.formattedDuration, style: KaivaTextStyles.durationLabel),
-              if (showDownload) _DownloadIcon(song: song, ref: ref),
+              const SizedBox(width: 8),
+              if (isPlaying)
+                _PlayingIndicator(song: song)
+              else ...[
+                Text(song.formattedDuration, style: KaivaTextStyles.durationLabel),
+                if (showDownload) _DownloadIcon(song: song, ref: ref),
+              ],
               if (onMoreTap != null) ...[
                 IconButton(
                   icon: const Icon(Icons.more_vert, size: 20),
@@ -101,6 +107,17 @@ class SongTile extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _PlayingIndicator extends ConsumerWidget {
+  final Song song;
+  const _PlayingIndicator({required this.song});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isPlaying = ref.watch(isPlayingProvider);
+    return WaveformAnimation(isPlaying: isPlaying);
   }
 }
 

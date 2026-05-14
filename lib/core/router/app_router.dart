@@ -13,6 +13,7 @@ import '../../features/playlist/playlist_detail_screen.dart';
 import '../../features/stats/stats_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/widgets/equalizer_screen.dart';
+import '../../features/settings/widgets/spotify_import_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../shared/widgets/kaiva_scaffold.dart';
 import '../../core/utils/settings_keys.dart';
@@ -23,8 +24,16 @@ String _initialLocation() {
   return done ? '/home' : '/onboarding';
 }
 
+String? _redirect(BuildContext context, GoRouterState state) {
+  final box = Hive.box('kaiva_settings');
+  final done = box.get(SettingsKeys.onboardingComplete, defaultValue: false) as bool;
+  if (done && state.matchedLocation == '/onboarding') return '/home';
+  return null;
+}
+
 final appRouter = GoRouter(
   initialLocation: _initialLocation(),
+  redirect: _redirect,
   routes: [
     // ── Onboarding (pre-auth gate) ──────────────────────────
     GoRoute(
@@ -112,6 +121,11 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/settings/equalizer',
       builder: (_, __) => const EqualizerScreen(),
+    ),
+
+    GoRoute(
+      path: '/settings/spotify-import',
+      builder: (_, __) => const SpotifyImportScreen(),
     ),
   ],
 );

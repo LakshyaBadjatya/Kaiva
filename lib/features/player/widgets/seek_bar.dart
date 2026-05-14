@@ -29,54 +29,33 @@ class _SeekBarState extends ConsumerState<SeekBar> {
         ? Duration(milliseconds: _draggingValue!.toInt())
         : (posData?.position ?? Duration.zero);
     final duration = posData?.duration ?? Duration.zero;
-    final buffered = posData?.bufferedPosition ?? Duration.zero;
 
     final maxMs = duration.inMilliseconds.toDouble();
     final posMs = position.inMilliseconds.toDouble().clamp(0.0, maxMs > 0 ? maxMs : 1.0);
-    final bufMs = buffered.inMilliseconds.toDouble().clamp(0.0, maxMs > 0 ? maxMs : 1.0);
 
     return Column(
       children: [
-        Stack(
-          children: [
-            // Buffered track
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: KaivaColors.seekBarTrack.withValues(alpha: 0.6),
-                inactiveTrackColor: KaivaColors.seekBarTrack,
-                thumbShape: SliderComponentShape.noThumb,
-                overlayShape: SliderComponentShape.noOverlay,
-                trackHeight: 3,
-              ),
-              child: Slider(
-                value: maxMs > 0 ? bufMs / maxMs : 0,
-                onChanged: null,
-              ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: KaivaColors.accentPrimary,
+            inactiveTrackColor: KaivaColors.seekBarTrack,
+            thumbColor: KaivaColors.seekBarThumb,
+            overlayColor: KaivaColors.accentGlow,
+            trackHeight: 3,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+          ),
+          child: Slider(
+            value: maxMs > 0 ? posMs / maxMs : 0,
+            onChangeStart: (_) => setState(() => _draggingValue = posMs),
+            onChanged: (v) => setState(
+              () => _draggingValue = (v * maxMs).clamp(0.0, maxMs),
             ),
-            // Playback + draggable thumb
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: KaivaColors.accentPrimary,
-                inactiveTrackColor: Colors.transparent,
-                thumbColor: KaivaColors.seekBarThumb,
-                overlayColor: KaivaColors.accentGlow,
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-              ),
-              child: Slider(
-                value: maxMs > 0 ? posMs / maxMs : 0,
-                onChangeStart: (_) => setState(() => _draggingValue = posMs),
-                onChanged: (v) => setState(
-                  () => _draggingValue = (v * maxMs).clamp(0.0, maxMs),
-                ),
-                onChangeEnd: (v) {
-                  handler.seek(Duration(milliseconds: (v * maxMs).toInt()));
-                  setState(() => _draggingValue = null);
-                },
-              ),
-            ),
-          ],
+            onChangeEnd: (v) {
+              handler.seek(Duration(milliseconds: (v * maxMs).toInt()));
+              setState(() => _draggingValue = null);
+            },
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),

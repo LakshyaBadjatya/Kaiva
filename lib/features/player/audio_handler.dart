@@ -97,6 +97,8 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
         MediaAction.seek,
         MediaAction.seekForward,
         MediaAction.seekBackward,
+        MediaAction.skipToNext,
+        MediaAction.skipToPrevious,
       },
       androidCompactActionIndices: const [0, 1, 2],
       processingState: switch (_player.processingState) {
@@ -306,8 +308,14 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     });
   }
 
+  bool _gaplessEnabled = false;
+
   Future<void> setGapless(bool enabled) async {
-    // just_audio handles gapless natively for ConcatenatingAudioSource
+    _gaplessEnabled = enabled;
+    // On iOS, disabling automatic stall minimisation reduces inter-track silence.
+    // On Android, just_audio's ConcatenatingAudioSource is always gapless at the
+    // ExoPlayer layer — no additional call needed.
+    await _player.setAutomaticallyWaitsToMinimizeStalling(!enabled);
   }
 
   // ── BaseAudioHandler overrides ───────────────────────────────

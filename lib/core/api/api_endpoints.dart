@@ -1,7 +1,7 @@
 class ApiEndpoints {
   ApiEndpoints._();
 
-  static const String defaultBaseUrl   = 'https://saavn.sumit.co';
+  static const String defaultBaseUrl   = 'https://jiosaavn-api-sigma-two.vercel.app';
 
   // ── Search ─────────────────────────────────────────────────
   static const String searchSongs      = '/api/search/songs';
