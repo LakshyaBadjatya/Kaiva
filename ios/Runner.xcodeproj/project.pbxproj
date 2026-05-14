@@ -20,6 +20,7 @@
 		KW0000002 /* KaivaLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = KW0000012 /* KaivaLiveActivityWidget.swift */; };
 		KW0000003 /* KaivaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = KW0000013 /* KaivaWidgetBundle.swift */; };
 		KW0000004 /* KaivaWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = KW0000020 /* KaivaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		KW0000005 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = KW0000017 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,6 +81,7 @@
 		KW0000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		KW0000015 /* KaivaWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KaivaWidgetExtension.entitlements; sourceTree = "<group>"; };
 		KW0000016 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		KW0000017 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		KW0000020 /* KaivaWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KaivaWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -159,6 +161,7 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				KW0000016 /* Runner.entitlements */,
+				KW0000017 /* GoogleService-Info.plist */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -311,6 +314,7 @@
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+				KW0000005 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
