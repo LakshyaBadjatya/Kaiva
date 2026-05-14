@@ -43,6 +43,46 @@ class StatsDao extends DatabaseAccessor<KaivaDatabase> with _$StatsDaoMixin {
 
   Future<List<ListeningStat>> getAllTimeStats() => select(listeningStats).get();
 
+  /// Top artists by total seconds played, all time. Returns up to [limit] rows.
+  Future<List<({String artistId, int totalSeconds})>> getTopArtists({int limit = 10}) async {
+    final rows = await customSelect(
+      'SELECT artist_id, SUM(seconds_played) AS total '
+      'FROM listening_stats '
+      'GROUP BY artist_id '
+      'ORDER BY total DESC '
+      'LIMIT ?',
+      variables: [Variable.withInt(limit)],
+      readsFrom: {listeningStats},
+    ).get();
+    return rows.map((r) => (
+      artistId: r.read<String>('artist_id'),
+      totalSeconds: r.read<int>('total'),
+    )).toList();
+  }
+
+  /// Albums played today, ordered by play count descending.
+  Future<List<({String albumId, String album, String artworkUrl, int playCount})>>
+      getDailyAlbums({int limit = 10}) async {
+    final today = _truncateToDay(DateTime.now());
+    final rows = await customSelect(
+      'SELECT s.album_id, s.album, s.artwork_url, COUNT(*) AS cnt '
+      'FROM listening_stats ls '
+      'JOIN songs s ON ls.song_id = s.id '
+      'WHERE ls.date = ? AND s.album_id IS NOT NULL AND s.album_id != "" '
+      'GROUP BY s.album_id '
+      'ORDER BY cnt DESC '
+      'LIMIT ?',
+      variables: [Variable.withDateTime(today), Variable.withInt(limit)],
+      readsFrom: {listeningStats},
+    ).get();
+    return rows.map((r) => (
+      albumId: r.read<String>('album_id'),
+      album: r.read<String>('album'),
+      artworkUrl: r.read<String>('artwork_url'),
+      playCount: r.read<int>('cnt'),
+    )).toList();
+  }
+
   Future<void> clearStats() => delete(listeningStats).go();
 
   DateTime _truncateToDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);

@@ -46,7 +46,7 @@ final isSongLikedProvider = StreamProvider.family<bool, String>((ref, songId) {
 });
 
 // ── Library filter ────────────────────────────────────────────
-enum LibraryFilter { all, liked, playlists }
+enum LibraryFilter { all, liked, playlists, artists, albums }
 
 final libraryFilterProvider =
     StateProvider<LibraryFilter>((ref) => LibraryFilter.all);
@@ -56,3 +56,68 @@ enum LibrarySortMode { recentlyAdded, alphabetical }
 
 final librarySortProvider =
     StateProvider<LibrarySortMode>((ref) => LibrarySortMode.recentlyAdded);
+
+// ── Top artist info model ─────────────────────────────────────
+class TopArtistInfo {
+  final String artistId;
+  final String artistName;
+  final String artworkUrl;
+  final int totalSeconds;
+
+  const TopArtistInfo({
+    required this.artistId,
+    required this.artistName,
+    required this.artworkUrl,
+    required this.totalSeconds,
+  });
+}
+
+// ── Daily album info model ────────────────────────────────────
+class DailyAlbumInfo {
+  final String albumId;
+  final String albumName;
+  final String artworkUrl;
+  final int playCount;
+
+  const DailyAlbumInfo({
+    required this.albumId,
+    required this.albumName,
+    required this.artworkUrl,
+    required this.playCount,
+  });
+}
+
+// ── Top artists provider (all-time by seconds played) ─────────
+final topArtistsProvider = FutureProvider<List<TopArtistInfo>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final topRows = await db.statsDao.getTopArtists(limit: 10);
+  if (topRows.isEmpty) return [];
+
+  final result = <TopArtistInfo>[];
+  for (final row in topRows) {
+    // Find a song by this artist to get name + artwork
+    final songs = await db.songsDao.getAllSongs();
+    final match = songs.where((s) => s.artistId == row.artistId).toList();
+    if (match.isNotEmpty) {
+      result.add(TopArtistInfo(
+        artistId: row.artistId,
+        artistName: match.first.artist,
+        artworkUrl: match.first.artworkUrl.replaceAll('150x150', '500x500'),
+        totalSeconds: row.totalSeconds,
+      ));
+    }
+  }
+  return result;
+});
+
+// ── Daily albums provider (played today) ─────────────────────
+final dailyAlbumsProvider = FutureProvider<List<DailyAlbumInfo>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  final rows = await db.statsDao.getDailyAlbums(limit: 10);
+  return rows.map((r) => DailyAlbumInfo(
+    albumId: r.albumId,
+    albumName: r.album,
+    artworkUrl: r.artworkUrl.replaceAll('150x150', '500x500'),
+    playCount: r.playCount,
+  )).toList();
+});
