@@ -1,0 +1,74 @@
+workflows:
+  ios-sideloadly:
+    name: iOS — Sideloadly IPA
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: 3.22.0
+      xcode: latest
+      cocoapods: default
+      # These three vars must be set in Codemagic UI → Environment variables
+      # (mark them as "Secure" so they are not visible in logs)
+      #
+      #  APPLE_ID          — your Apple ID email (free account is fine)
+      #  APPLE_ID_PASSWORD — app-specific password from appleid.apple.com
+      #  BUNDLE_ID         — com.lakshya.kaiva
+      vars:
+        BUNDLE_ID: com.lakshya.kaiva
+        XCODE_WORKSPACE: ios/Runner.xcworkspace
+        XCODE_SCHEME: Runner
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Generate code (Drift + Riverpod)
+        script: |
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Pod install
+        script: |
+          cd ios && pod install --repo-update
+
+      - name: Set iOS deployment target to 16.1 for widget extension
+        script: |
+          # The widget extension requires iOS 16.1+.
+          # The main Runner target stays at 13.0 — only the extension is bumped.
+          echo "Deployment target already set in project.pbxproj — nothing to do here."
+
+      - name: Build unsigned IPA (for Sideloadly)
+        script: |
+          # Build a "development" archive with no real signing.
+          # Sideloadly re-signs it with your personal Apple ID on the PC.
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -archivePath build/Runner.xcarchive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            archive
+
+      - name: Export unsigned IPA
+        script: |
+          mkdir -p build/ipa
+          # Pack the .app from the archive into a flat .ipa manually
+          # (no ExportOptions.plist needed for unsigned builds)
+          cp -r build/Runner.xcarchive/Products/Applications/Runner.app /tmp/Payload/
+          cd /tmp && zip -r "$CM_BUILD_DIR/build/ipa/Kaiva-unsigned.ipa" Payload/
+          rm -rf /tmp/Payload
+
+    artifacts:
+      - build/ipa/Kaiva-unsigned.ipa
+
+    # Optional: get an email when the build finishes
+    publishing:
+      email:
+        recipients:
+          - lakkudagamer@gmail.com
+        notify:
+          success: true
+          failure: true

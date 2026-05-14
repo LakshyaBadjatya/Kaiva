@@ -1,0 +1,106 @@
+name: kaiva
+description: Kaiva — Music for everyone.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── Audio ──────────────────────────────────────────────────
+  just_audio: ^0.9.40
+  just_audio_background: ^0.0.1-beta.17
+  audio_session: ^0.1.21
+  audio_service: ^0.18.15
+
+  # ── State Management ───────────────────────────────────────
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.3.5
+
+  # ── Local Database ─────────────────────────────────────────
+  drift: ^2.20.2
+  drift_flutter: ^0.2.4
+  sqlite3_flutter_libs: ^0.5.28
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
+  # ── Key-Value Store ────────────────────────────────────────
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+
+  # ── Networking ─────────────────────────────────────────────
+  dio: ^5.7.0
+  cached_network_image: ^3.4.1
+  connectivity_plus: ^6.1.0
+
+  # ── Downloads ─────────────────────────────────────────────
+  flutter_downloader: ^1.11.8
+  permission_handler: ^11.3.1
+
+  # ── UI & Animation ─────────────────────────────────────────
+  flutter_animate: ^4.5.0
+  animations: ^2.0.11
+  lottie: ^3.1.2
+  shimmer: ^3.0.0
+  palette_generator: ^0.3.3
+
+  # ── Fonts ──────────────────────────────────────────────────
+  google_fonts: ^6.2.1
+
+  # ── Player UI ─────────────────────────────────────────────
+  sliding_up_panel: ^2.0.0+1
+  marquee: ^2.3.0
+  percent_indicator: ^4.2.3
+
+  # ── Lyrics ────────────────────────────────────────────────
+  scrollable_positioned_list: ^0.3.8
+
+  # ── Equalizer ─────────────────────────────────────────────
+  equalizer_flutter: ^0.0.1
+
+  # ── Firebase ───────────────────────────────────────────────
+  firebase_core: ^3.13.1
+  firebase_auth: ^5.5.2
+  cloud_firestore: ^5.6.6
+  google_sign_in: ^6.2.2
+
+  # ── Sharing & Utils ───────────────────────────────────────
+  share_plus: ^10.0.3
+  url_launcher: ^6.3.1
+  intl: ^0.19.0
+  uuid: ^4.4.2
+  collection: ^1.18.0
+  rxdart: ^0.28.0
+
+  # ── Image ──────────────────────────────────────────────────
+  image_picker: ^1.1.2
+  image_cropper: ^8.0.2
+
+  # ── Storage info ──────────────────────────────────────────
+  flutter_storage_info: ^1.0.1
+
+  # ── Navigation ─────────────────────────────────────────────
+  go_router: ^14.0.0
+
+  # ── Package info ───────────────────────────────────────────
+  package_info_plus: ^8.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  drift_dev: ^2.20.2
+  build_runner: ^2.4.12
+  riverpod_generator: ^2.4.3
+  flutter_lints: ^4.0.0
+  custom_lint: ^0.7.6
+  riverpod_lint: ^2.4.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/animations/
+    - assets/images/
+    - assets/icons/
