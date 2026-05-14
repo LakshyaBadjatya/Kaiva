@@ -154,6 +154,7 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   // ── Public API ───────────────────────────────────────────────
 
   Future<void> playSong(Song song) async {
+    _resetCrossfadeState();
     final mediaItem = song.toMediaItem();
     this.mediaItem.add(mediaItem);
     queue.add([mediaItem]);
@@ -167,6 +168,7 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   }
 
   Future<void> playQueue(List<Song> songs, int index) async {
+    _resetCrossfadeState();
     final items = songs.map((s) => s.toMediaItem()).toList();
     queue.add(items);
     await _player.setAudioSource(
@@ -299,6 +301,7 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
       if (vol <= 0.0) {
         t.cancel();
         _isCrossfading = false;
+        _player.setVolume(1.0); // restore for next track
       }
     });
   }
@@ -326,8 +329,16 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
+  void _resetCrossfadeState() {
+    _crossfadeTimer?.cancel();
+    _crossfadeTimer = null;
+    _isCrossfading = false;
+    _player.setVolume(1.0);
+  }
+
   @override
   Future<void> skipToNext() async {
+    _resetCrossfadeState();
     if (_player.hasNext) {
       await _player.seekToNext();
     }
@@ -335,6 +346,7 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
 
   @override
   Future<void> skipToPrevious() async {
+    _resetCrossfadeState();
     // If more than 3s in, restart track; else go to previous
     if (_player.position.inSeconds > 3) {
       await _player.seek(Duration.zero);
@@ -344,7 +356,10 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   }
 
   @override
-  Future<void> skipToQueueItem(int index) => _player.seek(Duration.zero, index: index);
+  Future<void> skipToQueueItem(int index) async {
+    _resetCrossfadeState();
+    await _player.seek(Duration.zero, index: index);
+  }
 
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
