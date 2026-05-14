@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/database/database_provider.dart';
-import '../../../core/database/kaiva_database.dart';
+import '../../../core/database/kaiva_database.dart' hide Song;
 import '../../../core/models/song.dart';
 import '../../../core/theme/kaiva_colors.dart';
 import '../../../core/theme/kaiva_text_styles.dart';
