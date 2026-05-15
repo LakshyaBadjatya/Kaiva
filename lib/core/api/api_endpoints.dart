@@ -24,7 +24,7 @@ class ApiEndpoints {
   static String artistAlbums(String id)     => '/api/artists/$id/albums';
 
   // ── Playlist ───────────────────────────────────────────────
-  static String playlist(String id)         => '/api/playlists/$id';
+  static String playlist(String id)         => '/api/playlists?id=$id';
 
   // ── Charts / Trending ──────────────────────────────────────
   static const String trending             = '/api/modules';

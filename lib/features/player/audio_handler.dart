@@ -26,8 +26,18 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   DateTime? _trackStartTime;
   String? _currentStatsId;
   String? _currentStatsArtistId;
+  // Richer context captured at track-start for the play-events recorder
+  String? _currentLanguage;
+  String? _currentAlbum;
+  Duration? _currentDuration;
+  bool _currentEventCompleted = false; // set true when processingState=completed
 
   void setDatabase(KaivaDatabase db) => _db = db;
+
+  /// Hook invoked when the user reaches the end of the queue (no `hasNext`).
+  /// The recommender provider wires this up at app start. Returns a list of
+  /// songs to append + autoplay, or empty/null to do nothing.
+  Future<List<Song>>? Function()? onQueueExhausted;
 
   // Expose raw streams for Riverpod providers
   Stream<Duration> get positionStream => _player.positionStream;
@@ -89,6 +99,10 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     _player.playbackEventStream.listen(_broadcastState);
     _player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
+        // Mark the current event as a clean completion. _onTrackChanged
+        // (fired by the sequence listener when the next track starts)
+        // will then emit a 'complete' event instead of a 'skip'.
+        _currentEventCompleted = true;
         if (stopAfterCurrentTrack) {
           stopAfterCurrentTrack = false;
           stop();
@@ -247,10 +261,19 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
 
   void _onTrackChanged(MediaItem item) {
     _flushStats();
-    _currentStatsId = item.id;
-    _currentStatsArtistId = item.artist ?? '';
+
+    // Begin tracking the new item. item.id is the stream URL; the
+    // canonical JioSaavn song/artist ids live in extras.
+    final songId = (item.extras?['songId'] as String?) ?? item.id;
+    final artistId = (item.extras?['artistId'] as String?) ?? '';
+    _currentStatsId = songId;
+    _currentStatsArtistId = artistId;
+    _currentAlbum = item.album ?? '';
+    _currentLanguage = (item.extras?['language'] as String?) ?? '';
+    _currentDuration = item.duration;
+    _currentEventCompleted = false;
     _trackStartTime = DateTime.now();
-    _db?.recentlyPlayedDao.recordPlay(item.id);
+    _db?.recentlyPlayedDao.recordPlay(songId);
 
     final artUrl = (item.artUri?.toString() ?? '')
         .replaceAll('150x150', '500x500');
@@ -270,14 +293,41 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     final start = _trackStartTime;
     if (songId == null || artistId == null || start == null || _db == null) return;
     final seconds = DateTime.now().difference(start).inSeconds;
-    if (seconds < 5) return; // ignore accidental skips
-    _db!.statsDao.recordListening(
+
+    // Always log a play-event for the recommender — even short skips are signal.
+    final durationSec = _currentDuration?.inSeconds ?? 0;
+    final completedFraction =
+        durationSec > 0 ? seconds / durationSec : (seconds >= 30 ? 1.0 : 0.0);
+    final eventType = _currentEventCompleted || completedFraction >= 0.8
+        ? 'complete'
+        : seconds < 10
+            ? 'short_skip'
+            : 'skip';
+    _db!.playEventsDao.recordEvent(
       songId: songId,
       artistId: artistId,
-      secondsPlayed: seconds,
+      language: _currentLanguage ?? '',
+      album: _currentAlbum ?? '',
+      eventType: eventType,
+      playedSeconds: seconds,
+      durationSeconds: durationSec,
     );
+
+    // Legacy aggregate stats — keep for the Stats screen.
+    if (seconds >= 5) {
+      _db!.statsDao.recordListening(
+        songId: songId,
+        artistId: artistId,
+        secondsPlayed: seconds,
+      );
+    }
+
     _currentStatsId = null;
     _currentStatsArtistId = null;
+    _currentLanguage = null;
+    _currentAlbum = null;
+    _currentDuration = null;
+    _currentEventCompleted = false;
     _trackStartTime = null;
   }
 
@@ -364,6 +414,32 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     _resetCrossfadeState();
     if (_player.hasNext) {
       await _player.seekToNext();
+      return;
+    }
+    // Queue exhausted — ask the recommender for more.
+    final hook = onQueueExhausted;
+    if (hook == null) return;
+    try {
+      final more = await hook();
+      if (more == null || more.isEmpty) return;
+      final source = _player.audioSource;
+      if (source is ConcatenatingAudioSource) {
+        await source.addAll(
+          more
+              .map((s) => AudioSource.uri(
+                    _resolveStreamUri(s.bestStreamUrl),
+                    tag: s.toMediaItem(),
+                  ))
+              .toList(),
+        );
+        queue.add([...queue.value, ...more.map((s) => s.toMediaItem())]);
+        await _player.seekToNext();
+      } else {
+        // No active queue — start a fresh one.
+        await playQueue(more, 0);
+      }
+    } catch (_) {
+      // Recommender failed — just stop.
     }
   }
 

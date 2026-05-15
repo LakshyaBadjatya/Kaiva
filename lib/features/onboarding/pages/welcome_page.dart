@@ -156,26 +156,28 @@ class _LogoMark extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 96,
-          height: 96,
+          width: 120,
+          height: 120,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
             boxShadow: const [
               BoxShadow(
-                color: KaivaColors.accentGlow,
-                blurRadius: 32,
-                spreadRadius: 4,
+                color: Color(0x40FFFFFF),
+                blurRadius: 40,
+                spreadRadius: 0,
+              ),
+              BoxShadow(
+                color: Color(0x1A8CD4FF),
+                blurRadius: 60,
+                spreadRadius: 8,
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: Image.asset(
-              'assets/images/kaiva_logo.png',
-              width: 96,
-              height: 96,
-              fit: BoxFit.cover,
-            ),
+          child: Image.asset(
+            'assets/images/kaiva_logo.png',
+            width: 120,
+            height: 120,
+            fit: BoxFit.contain,
           ),
         ),
         const SizedBox(height: 16),

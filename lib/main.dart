@@ -15,6 +15,7 @@ import 'core/utils/settings_keys.dart';
 import 'core/database/database_provider.dart';
 import 'core/database/kaiva_database.dart';
 import 'core/firebase/sync_service.dart';
+import 'core/recommender/recommender_provider.dart';
 import 'core/theme/kaiva_colors.dart';
 import 'features/downloads/download_manager.dart';
 import 'features/player/audio_handler.dart';
@@ -31,6 +32,7 @@ class _AppWithSyncState extends ConsumerState<_AppWithSync> {
   void initState() {
     super.initState();
     _restoreAudioSettings();
+    _wireQueueAutoplay();
   }
 
   void _restoreAudioSettings() {
@@ -42,10 +44,37 @@ class _AppWithSyncState extends ConsumerState<_AppWithSync> {
     if (gapless) handler.setGapless(true);
   }
 
+  // When the queue runs out, fetch recommendations and append to autoplay.
+  void _wireQueueAutoplay() {
+    final handler = ref.read(audioHandlerProvider);
+    handler.onQueueExhausted = () async {
+      try {
+        final profile = await ref.read(tasteProfileProvider.future);
+        final rec = ref.read(recommenderProvider);
+        return rec.recommend(profile: profile, limit: 15);
+      } catch (_) {
+        return const [];
+      }
+    };
+  }
+
+  String? _lastSongId;
+
   @override
   Widget build(BuildContext context) {
     ref.watch(syncServiceProvider);
     ref.watch(downloadManagerProvider);
+
+    // When the currently-playing song changes, invalidate the recommender
+    // cache so "For You" re-ranks from the latest events.
+    ref.listen(currentSongProvider, (prev, next) {
+      final newId = next.valueOrNull?.id;
+      if (newId == null || newId == _lastSongId) return;
+      _lastSongId = newId;
+      ref.invalidate(tasteProfileProvider);
+      ref.invalidate(forYouProvider);
+    });
+
     return const KaivaApp();
   }
 }

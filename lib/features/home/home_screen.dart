@@ -10,6 +10,7 @@ import '../../core/models/song.dart';
 import '../../core/models/album.dart';
 import '../../core/models/artist.dart';
 import '../../core/models/playlist.dart';
+import '../../core/recommender/recommender_provider.dart';
 import '../../core/theme/kaiva_colors.dart';
 import '../../core/theme/kaiva_text_styles.dart';
 import '../../core/utils/song_loader.dart';
@@ -88,6 +89,13 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: KaivaSpacing.xl),
                 ],
+
+                // ── For You (personalised recommendations) ───
+                _ForYouSection(
+                  excludeIds: {
+                    for (final s in feed.trending) s.id,
+                  },
+                ),
 
                 // ── Trending Now ──────────────────────────────
                 if (feed.trending.length > 5) ...[
@@ -550,6 +558,94 @@ class _SpotlightCard extends StatelessWidget {
   }
 }
 
+// ─── For You: personalised recommendations from on-device taste model ──
+class _ForYouSection extends ConsumerWidget {
+  final Set<String> excludeIds;
+  const _ForYouSection({required this.excludeIds});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final args = ForYouArgs(limit: 12, excludeIds: excludeIds);
+    final asyncRecs = ref.watch(forYouProvider(args));
+
+    return asyncRecs.when(
+      loading: () => const _ForYouSkeleton(),
+      // Silent on error — fall back to other sections rather than nag the user.
+      error: (_, __) => const SizedBox.shrink(),
+      data: (recs) {
+        if (recs.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionHeader(title: 'For You'),
+            const SizedBox(height: KaivaSpacing.md),
+            _HorizontalSongs(
+              songs: recs,
+              onTap: (_, idx) async {
+                final handler = ref.read(audioHandlerProvider);
+                await handler.playQueue(recs, idx);
+              },
+            ),
+            const SizedBox(height: KaivaSpacing.xl),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ForYouSkeleton extends StatelessWidget {
+  const _ForYouSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader(title: 'For You'),
+        const SizedBox(height: KaivaSpacing.md),
+        SizedBox(
+          height: 332,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: KaivaSpacing.marginMobile),
+            itemCount: 4,
+            itemBuilder: (_, __) => Padding(
+              padding: const EdgeInsets.only(right: KaivaSpacing.gutter),
+              child: SizedBox(
+                width: 240,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 240,
+                      height: 240,
+                      decoration: BoxDecoration(
+                        color: KaivaColors.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(KaivaRadius.lg),
+                      ),
+                    ),
+                    const SizedBox(height: KaivaSpacing.sm),
+                    Container(
+                      width: 160,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: KaivaColors.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: KaivaSpacing.xl),
+      ],
+    );
+  }
+}
+
 // ─── Trending row (240px Stitch-style cards) ────────────────
 class _HorizontalSongs extends StatelessWidget {
   final List<Song> songs;
@@ -624,7 +720,7 @@ class _MadeForYouGrid extends StatelessWidget {
           crossAxisCount: 2,
           crossAxisSpacing: KaivaSpacing.gutter,
           mainAxisSpacing: KaivaSpacing.md,
-          childAspectRatio: 0.82,
+          childAspectRatio: 0.74,
         ),
         itemBuilder: (context, i) {
           final pl = items[i];

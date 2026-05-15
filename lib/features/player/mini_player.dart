@@ -343,11 +343,20 @@ class _PlayPauseButtonState extends State<_PlayPauseButton>
           color: KaivaColors.textPrimary, // on-surface (creamy off-white)
           shape: BoxShape.circle,
         ),
-        child: AnimatedIcon(
-          icon: AnimatedIcons.play_pause,
-          progress: _anim,
-          color: KaivaColors.backgroundPrimary,
-          size: 22,
+        child: Center(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            transitionBuilder: (child, anim) =>
+                ScaleTransition(scale: anim, child: child),
+            child: Icon(
+              widget.isPlaying
+                  ? Icons.pause_rounded
+                  : Icons.play_arrow_rounded,
+              key: ValueKey(widget.isPlaying),
+              color: KaivaColors.backgroundPrimary,
+              size: 24,
+            ),
+          ),
         ),
       ),
     );

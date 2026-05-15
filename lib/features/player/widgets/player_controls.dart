@@ -153,11 +153,16 @@ class _PlayPauseCircle extends StatelessWidget {
           ],
         ),
         child: Center(
-          child: AnimatedIcon(
-            icon: AnimatedIcons.play_pause,
-            progress: anim,
-            color: KaivaColors.textOnAccent,
-            size: 44,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            transitionBuilder: (child, a) =>
+                ScaleTransition(scale: a, child: child),
+            child: Icon(
+              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              key: ValueKey(isPlaying),
+              color: KaivaColors.textOnAccent,
+              size: 44,
+            ),
           ),
         ),
       ),
