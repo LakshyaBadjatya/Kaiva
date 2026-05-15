@@ -74,18 +74,15 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                     Text(
                       'Pick your\nfavourite artists.',
                       style: KaivaTextStyles.displayLarge.copyWith(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.8,
-                        height: 1.1,
+                        color: KaivaColors.accentBright,
+                        height: 1.05,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: KaivaSpacing.sm),
                     Text(
                       'Choose 3 or more to personalise your home.',
                       style: KaivaTextStyles.bodyMedium.copyWith(
                         color: KaivaColors.textSecondary,
-                        fontSize: 14,
                       ),
                     ),
                   ],

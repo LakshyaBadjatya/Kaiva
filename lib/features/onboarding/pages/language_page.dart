@@ -64,18 +64,15 @@ class _LanguagePageState extends ConsumerState<LanguagePage>
                     Text(
                       'What do you\nlisten to?',
                       style: KaivaTextStyles.displayLarge.copyWith(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.8,
-                        height: 1.1,
+                        color: KaivaColors.accentBright,
+                        height: 1.05,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: KaivaSpacing.sm),
                     Text(
                       'Pick your languages — we\'ll tailor your feed.',
                       style: KaivaTextStyles.bodyMedium.copyWith(
                         color: KaivaColors.textSecondary,
-                        fontSize: 14,
                       ),
                     ),
                   ],

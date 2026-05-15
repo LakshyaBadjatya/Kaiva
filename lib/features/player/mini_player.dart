@@ -54,76 +54,88 @@ class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
     final isPlaying = ref.watch(isPlayingProvider);
     final handler = ref.read(audioHandlerProvider);
 
-    return GestureDetector(
-      onTap: () => context.push('/player'),
-      onVerticalDragEnd: (d) {
-        if (d.primaryVelocity != null && d.primaryVelocity! < -200) {
-          context.push('/player');
-        }
-      },
-      onHorizontalDragUpdate: (d) => _dragDeltaX += d.delta.dx,
-      onHorizontalDragEnd: (d) {
-        if (_dragDeltaX < -60) {
-          HapticFeedback.lightImpact();
-          handler.skipToNext();
-        } else if (_dragDeltaX > 60) {
-          HapticFeedback.lightImpact();
-          handler.skipToPrevious();
-        }
-        _dragDeltaX = 0;
-      },
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(KaivaRadius.md),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-            child: Container(
-              height: 64,
-              decoration: BoxDecoration(
-                color: KaivaColors.surfaceContainerHigh.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(KaivaRadius.md),
-                border: Border.all(color: KaivaColors.borderSubtle, width: 1),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(KaivaRadius.sm),
-                            child: AlbumArt(
-                              url: widget.song.artworkUrl,
-                              size: 44,
-                              borderRadius: KaivaRadius.sm,
-                              heroTag: 'album_art_${widget.song.id}',
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(KaivaRadius.md),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: KaivaColors.surfaceContainerHigh.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(KaivaRadius.md),
+              border: Border.all(color: KaivaColors.borderSubtle, width: 1),
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 4, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => context.push('/player'),
+                            onVerticalDragEnd: (d) {
+                              if (d.primaryVelocity != null &&
+                                  d.primaryVelocity! < -200) {
+                                context.push('/player');
+                              }
+                            },
+                            onHorizontalDragUpdate: (d) =>
+                                _dragDeltaX += d.delta.dx,
+                            onHorizontalDragEnd: (d) {
+                              if (_dragDeltaX < -60) {
+                                HapticFeedback.lightImpact();
+                                handler.skipToNext();
+                              } else if (_dragDeltaX > 60) {
+                                HapticFeedback.lightImpact();
+                                handler.skipToPrevious();
+                              }
+                              _dragDeltaX = 0;
+                            },
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(KaivaRadius.sm),
+                                  child: AlbumArt(
+                                    url: widget.song.artworkUrl,
+                                    size: 44,
+                                    borderRadius: KaivaRadius.sm,
+                                    heroTag: 'album_art_${widget.song.id}',
+                                  ),
+                                ),
+                                const SizedBox(width: KaivaSpacing.sm),
+                                Expanded(child: _buildTitle()),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: KaivaSpacing.sm),
-                          Expanded(child: _buildTitle()),
-                          _LikeButton(songId: widget.song.id),
-                          const SizedBox(width: 4),
-                          _PlayPauseButton(isPlaying: isPlaying, handler: handler),
-                          IconButton(
-                            icon: const Icon(Icons.skip_next_rounded, size: 26),
-                            color: KaivaColors.textPrimary,
-                            onPressed: () {
-                              HapticFeedback.lightImpact();
-                              handler.skipToNext();
-                            },
-                            padding: EdgeInsets.zero,
-                            constraints:
-                                const BoxConstraints(minWidth: 36, minHeight: 36),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 4),
+                        _LikeButton(songId: widget.song.id),
+                        _PlayPauseButton(isPlaying: isPlaying, handler: handler),
+                        IconButton(
+                          icon: const Icon(Icons.skip_next_rounded, size: 24),
+                          color: KaivaColors.textPrimary,
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            handler.skipToNext();
+                          },
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          constraints:
+                              const BoxConstraints(minWidth: 32, minHeight: 32),
+                          splashRadius: 20,
+                        ),
+                      ],
                     ),
                   ),
-                  const _MiniProgressBar(),
-                ],
-              ),
+                ),
+                const _MiniProgressBar(),
+              ],
             ),
           ),
         ),
@@ -216,7 +228,7 @@ class _LikeButton extends ConsumerWidget {
     return IconButton(
       icon: Icon(
         isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-        size: 20,
+        size: 22,
       ),
       color: isLiked ? KaivaColors.accentPrimary : KaivaColors.textMuted,
       onPressed: () {
@@ -224,7 +236,9 @@ class _LikeButton extends ConsumerWidget {
         ref.read(databaseProvider).likedSongsDao.toggleLike(songId);
       },
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      visualDensity: VisualDensity.compact,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      splashRadius: 20,
     );
   }
 }

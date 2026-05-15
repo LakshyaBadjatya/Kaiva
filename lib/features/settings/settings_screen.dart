@@ -62,16 +62,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset('assets/images/kaiva_logo.png', width: 28, height: 28, fit: BoxFit.cover),
-            ),
-            const SizedBox(width: 10),
-            const Text('Settings', style: KaivaTextStyles.headlineLarge),
-          ],
+        centerTitle: true,
+        backgroundColor: KaivaColors.backgroundPrimary,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        shape: const Border(
+          bottom: BorderSide(color: KaivaColors.borderSubtle, width: 1),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          color: KaivaColors.accentBright,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          'Settings',
+          style: KaivaTextStyles.headlineMedium.copyWith(
+            color: KaivaColors.accentBright,
+          ),
         ),
       ),
       body: ListView(

@@ -76,24 +76,22 @@ class _WelcomePageState extends ConsumerState<WelcomePage>
 
                 const SizedBox(height: 40),
 
-                // Headline
+                // Editorial Noir display headline (Playfair, warm sand)
                 Text(
                   'Your music,\nyour vibe.',
                   textAlign: TextAlign.center,
                   style: KaivaTextStyles.displayLarge.copyWith(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w800,
-                    height: 1.1,
-                    letterSpacing: -1.0,
+                    color: KaivaColors.accentBright,
+                    height: 1.05,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: KaivaSpacing.md),
                 Text(
                   'Millions of songs across every\nIndian language and beyond.',
                   textAlign: TextAlign.center,
                   style: KaivaTextStyles.bodyLarge.copyWith(
                     color: KaivaColors.textSecondary,
-                    height: 1.5,
+                    fontSize: 16,
                   ),
                 ),
 

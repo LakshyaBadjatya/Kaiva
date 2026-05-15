@@ -79,17 +79,17 @@ class HomeScreen extends ConsumerWidget {
             ),
             data: (feed) => SliverList(
               delegate: SliverChildListDelegate([
-                // ── Spotlight ─────────────────────────────────
+                // ── Spotlight carousel (auto-advance) ────────
                 if (feed.trending.isNotEmpty) ...[
-                  _SpotlightCard(
-                    song: feed.trending.first,
-                    onPlay: () => _playSong(ref, feed.trending, 0),
+                  _SpotlightCarousel(
+                    songs: feed.trending.take(5).toList(),
+                    onPlay: (idx) => _playSong(ref, feed.trending, idx),
                   ),
                   const SizedBox(height: KaivaSpacing.xl),
                 ],
 
                 // ── Trending Now ──────────────────────────────
-                if (feed.trending.length > 1) ...[
+                if (feed.trending.length > 5) ...[
                   _SectionHeader(
                     title: isOnline ? 'Trending Now' : 'Your Music',
                     showAll: isOnline ? 'Show All' : null,
@@ -101,9 +101,9 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: KaivaSpacing.md),
                   _HorizontalSongs(
-                    songs: feed.trending.skip(1).toList(),
+                    songs: feed.trending.skip(5).toList(),
                     onTap: (song, idx) =>
-                        _playSong(ref, feed.trending, idx + 1),
+                        _playSong(ref, feed.trending, idx + 5),
                   ),
                   const SizedBox(height: KaivaSpacing.xl),
                 ],
@@ -283,6 +283,141 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+// ─── Spotlight carousel (auto-advance, manual swipe) ────────
+class _SpotlightCarousel extends StatefulWidget {
+  final List<Song> songs;
+  final void Function(int index) onPlay;
+
+  const _SpotlightCarousel({required this.songs, required this.onPlay});
+
+  @override
+  State<_SpotlightCarousel> createState() => _SpotlightCarouselState();
+}
+
+class _SpotlightCarouselState extends State<_SpotlightCarousel> {
+  static const _autoAdvance = Duration(seconds: 5);
+  static const _resumeDelay = Duration(seconds: 7);
+  static const _animDuration = Duration(milliseconds: 600);
+
+  late final PageController _controller;
+  Timer? _timer;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.songs.length < 2) return;
+    _timer = Timer.periodic(_autoAdvance, (_) {
+      if (!mounted || !_controller.hasClients) return;
+      final next = (_index + 1) % widget.songs.length;
+      _controller.animateToPage(
+        next,
+        duration: _animDuration,
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  void _pauseAndResume() {
+    _timer?.cancel();
+    Future.delayed(_resumeDelay, () {
+      if (mounted) _startTimer();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final songs = widget.songs;
+    if (songs.isEmpty) return const SizedBox.shrink();
+    if (songs.length == 1) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: KaivaSpacing.marginMobile),
+        child: _SpotlightCard(song: songs.first, onPlay: () => widget.onPlay(0)),
+      );
+    }
+
+    return Column(
+      children: [
+        AspectRatio(
+          aspectRatio: 4 / 5,
+          child: NotificationListener<ScrollNotification>(
+            // Pause auto-advance while the user is dragging
+            onNotification: (n) {
+              if (n is ScrollStartNotification) {
+                _timer?.cancel();
+              } else if (n is ScrollEndNotification) {
+                _pauseAndResume();
+              }
+              return false;
+            },
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: songs.length,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemBuilder: (context, i) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KaivaSpacing.marginMobile,
+                  ),
+                  child: _SpotlightCard(
+                    song: songs[i],
+                    onPlay: () => widget.onPlay(i),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: KaivaSpacing.sm),
+        _CarouselDots(count: songs.length, current: _index),
+      ],
+    );
+  }
+}
+
+// Small page-indicator dots — sand for current, muted for others
+class _CarouselDots extends StatelessWidget {
+  final int count;
+  final int current;
+  const _CarouselDots({required this.count, required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(count, (i) {
+        final isActive = i == current;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: isActive ? 18 : 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: isActive
+                ? KaivaColors.accentPrimary
+                : KaivaColors.textMuted.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(3),
+          ),
+        );
+      }),
+    );
+  }
+}
+
 // ─── Spotlight hero card ────────────────────────────────────
 class _SpotlightCard extends StatelessWidget {
   final Song song;
@@ -292,11 +427,9 @@ class _SpotlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: KaivaSpacing.marginMobile),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.lightImpact();
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
           onPlay();
         },
         child: AspectRatio(
