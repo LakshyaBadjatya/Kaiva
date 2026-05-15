@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -204,17 +205,51 @@ class DownloadManager {
       qualityKbps: Value(best.quality),
     ));
 
-    final taskId = await FlutterDownloader.enqueue(
-      url: best.url,
-      savedDir: downloadDir,
-      fileName: '${song.id}.mp3',
-      showNotification: false,
-      openFileFromNotification: false,
-    );
+    if (Platform.isAndroid) {
+      final taskId = await FlutterDownloader.enqueue(
+        url: best.url,
+        savedDir: downloadDir,
+        fileName: '${song.id}.mp3',
+        showNotification: false,
+        openFileFromNotification: false,
+      );
 
-    if (taskId != null) {
-      _taskToSongId[taskId] = song.id;
-      _taskToDir[taskId] = downloadDir;
+      if (taskId != null) {
+        _taskToSongId[taskId] = song.id;
+        _taskToDir[taskId] = downloadDir;
+      }
+    } else {
+      // iOS: flutter_downloader's background isolate is killed by the OS
+      // code-signing monitor on sideloaded builds, so download directly
+      // with Dio and mark the song downloaded on completion.
+      await _downloadWithDio(
+        url: best.url,
+        songId: song.id,
+        downloadDir: downloadDir,
+        quality: best.quality,
+      );
+    }
+  }
+
+  Future<void> _downloadWithDio({
+    required String url,
+    required String songId,
+    required String downloadDir,
+    required int quality,
+  }) async {
+    final localPath = '$downloadDir/$songId.mp3';
+    try {
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(minutes: 5),
+      ));
+      await dio.download(url, localPath);
+      final db = _ref.read(databaseProvider);
+      await db.songsDao.markDownloaded(songId, localPath, quality);
+    } catch (e) {
+      debugPrint('Dio download failed for $songId: $e');
+      final f = File(localPath);
+      if (await f.exists()) await f.delete();
     }
   }
 

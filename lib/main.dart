@@ -154,14 +154,19 @@ Future<_AppDeps> _initApp() async {
     if (onEmulator) KaivaAudioHandler.enableProxy();
   }
 
-  // flutter_downloader init — port must be registered before initialize()
-  // so callbacks that fire immediately on cold start don't get dropped.
-  try {
-    initDownloadPort();
-    await FlutterDownloader.initialize(debug: kDebugMode);
-    await FlutterDownloader.registerCallback(downloadCallback);
-  } catch (e) {
-    debugPrint('flutter_downloader init failed: $e');
+  // flutter_downloader init — ANDROID ONLY. On iOS its background isolate
+  // executes a code page that fails the OS code-signing monitor on a
+  // sideloaded/ad-hoc-signed build, which SIGKILLs the whole app at launch
+  // (EXC_BAD_ACCESS, CODESIGNING "Invalid Page"). iOS downloads go through
+  // a plain Dio request instead (see DownloadManager).
+  if (Platform.isAndroid) {
+    try {
+      initDownloadPort();
+      await FlutterDownloader.initialize(debug: kDebugMode);
+      await FlutterDownloader.registerCallback(downloadCallback);
+    } catch (e) {
+      debugPrint('flutter_downloader init failed: $e');
+    }
   }
 
   return _AppDeps(audioHandler, db);
