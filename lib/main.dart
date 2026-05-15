@@ -42,6 +42,9 @@ class _AppWithSyncState extends ConsumerState<_AppWithSync> {
     final handler = ref.read(audioHandlerProvider);
     final crossfade = box.get(SettingsKeys.crossfadeDuration, defaultValue: 0) as int;
     if (crossfade > 0) handler.setCrossfade(crossfade);
+    final autoTune =
+        box.get(SettingsKeys.crossfadeAutoTune, defaultValue: false) as bool;
+    handler.setAutoTuneCrossfade(autoTune);
     final gapless = box.get(SettingsKeys.gaplessPlayback, defaultValue: false) as bool;
     if (gapless) handler.setGapless(true);
   }
@@ -124,34 +127,24 @@ Future<_AppDeps> _initApp() async {
   }
   ApiClient.reinitialize(ApiEndpoints.defaultBaseUrl);
 
-  // Audio service init.
-  //
-  // ANDROID: full AudioService.init() for OS-integrated background controls.
-  //
-  // iOS: AudioService.init() activates the AVAudioSession with the `audio`
-  // background capability. On a sideloaded/ad-hoc-signed build that
-  // capability validation raises a native abort (SIGABRT) that a Dart
-  // try/catch CANNOT intercept — the process is killed ~1-2s after a white
-  // screen, with no Dart-level log. So on iOS we use the bare handler
-  // (its own session config is guarded); just_audio playback still works.
+  // Audio service init — full OS-integrated background controls on BOTH
+  // platforms. iOS gets the `audio` UIBackgroundMode + AVAudioSession; this
+  // is signed correctly by TrollStore (which grants the entitlement), so the
+  // earlier sideload SIGABRT no longer applies. try/catch kept as a safety net.
   late final KaivaAudioHandler audioHandler;
-  if (Platform.isAndroid) {
-    try {
-      audioHandler = await AudioService.init(
-        builder: () => KaivaAudioHandler(),
-        config: const AudioServiceConfig(
-          androidNotificationChannelId: 'com.lakshya.kaiva.channel.audio',
-          androidNotificationChannelName: 'Kaiva',
-          androidNotificationOngoing: false,
-          androidStopForegroundOnPause: true,
-          notificationColor: Color(0xFFEF9F27),
-        ),
-      );
-    } catch (e) {
-      debugPrint('AudioService.init failed, using bare handler: $e');
-      audioHandler = KaivaAudioHandler();
-    }
-  } else {
+  try {
+    audioHandler = await AudioService.init(
+      builder: () => KaivaAudioHandler(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.lakshya.kaiva.channel.audio',
+        androidNotificationChannelName: 'Kaiva',
+        androidNotificationOngoing: false,
+        androidStopForegroundOnPause: true,
+        notificationColor: Color(0xFFEF9F27),
+      ),
+    );
+  } catch (e) {
+    debugPrint('AudioService.init failed, using bare handler: $e');
     audioHandler = KaivaAudioHandler();
   }
 
