@@ -19,13 +19,29 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.0</string>
+	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
+	<!-- Photo / media access for playlist covers & profile images -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kaiva needs access to your photos to set playlist covers and your profile picture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kaiva needs permission to save images to your photo library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kaiva needs camera access to take a photo for playlist covers or your profile.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kaiva needs microphone access for audio session management.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -47,20 +63,6 @@
 			</array>
 		</dict>
 	</dict>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
-	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
-	<true/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-		<string>fetch</string>
-		<string>processing</string>
-	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Required for audio session management.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Select a photo for your playlist cover.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

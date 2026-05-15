@@ -266,3 +266,4 @@ migrate_working_dir/
 app.*.symbols
 app.*.map.json
 *.dSYM/
+ios_backup_*/
