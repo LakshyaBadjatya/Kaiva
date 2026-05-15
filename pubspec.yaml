@@ -87,6 +87,22 @@ dependencies:
   # ── Package info ───────────────────────────────────────────
   package_info_plus: ^8.0.0
 
+  # ── Song identification (mic capture) ──────────────────────
+  record: ^5.2.1
+
+  # ── Celebration ────────────────────────────────────────────
+  confetti: ^0.7.0
+
+  # ── Smart Download background scheduling ───────────────────
+  workmanager: ^0.5.2
+
+# record 5.2.x resolves record_linux 0.7.2 (only implements the old
+# 1.0.x platform interface) against record_platform_interface 1.5.0,
+# which fails to compile. 1.3.0 is the record_linux release built for
+# the 1.5.0 interface. Harmless on Android/iOS; fixes desktop builds.
+dependency_overrides:
+  record_linux: 1.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

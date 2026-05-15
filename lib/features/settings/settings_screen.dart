@@ -156,6 +156,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onChanged: (v) => ref.read(wifiOnlyProvider.notifier).set(v),
           ),
           ListTile(
+            title: const Text('Smart Download', style: KaivaTextStyles.bodyMedium),
+            subtitle: Text('Auto-download likes & top tracks',
+                style: KaivaTextStyles.bodySmall
+                    .copyWith(color: KaivaColors.textMuted)),
+            trailing: const Icon(Icons.chevron_right_rounded, color: KaivaColors.textMuted),
+            onTap: () => context.push('/settings/smart-download'),
+          ),
+          ListTile(
             title: const Text('Manage Downloads', style: KaivaTextStyles.bodyMedium),
             trailing: const Icon(Icons.chevron_right_rounded, color: KaivaColors.textMuted),
             onTap: () => context.go('/downloads'),

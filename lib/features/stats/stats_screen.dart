@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/database/database_provider.dart';
 import '../../core/database/kaiva_database.dart' show ListeningStat;
 import '../../core/theme/kaiva_colors.dart';
@@ -21,6 +22,35 @@ class StatsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Listening Stats', style: KaivaTextStyles.headlineLarge),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () => context.push('/wrapped'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: KaivaColors.accentGlow,
+                  borderRadius: BorderRadius.circular(50),
+                  border: Border.all(
+                      color: KaivaColors.accentPrimary, width: 0.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded,
+                        size: 15, color: KaivaColors.accentPrimary),
+                    const SizedBox(width: 6),
+                    Text('Wrapped',
+                        style: KaivaTextStyles.labelMedium.copyWith(
+                            color: KaivaColors.accentPrimary)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: statsAsync.when(
         loading: () => const Center(

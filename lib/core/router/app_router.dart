@@ -15,6 +15,8 @@ import '../../features/settings/settings_screen.dart';
 import '../../features/settings/widgets/equalizer_screen.dart';
 import '../../features/settings/widgets/crossfade_screen.dart';
 import '../../features/settings/widgets/spotify_import_screen.dart';
+import '../../features/downloads/smart_download_screen.dart';
+import '../../features/wrapped/wrapped_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/mood/mood_mix_screen.dart';
 import '../../features/car_mode/car_mode_screen.dart';
@@ -130,6 +132,21 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/settings/crossfade',
       builder: (_, __) => const CrossfadeScreen(),
+    ),
+
+    GoRoute(
+      path: '/settings/smart-download',
+      builder: (_, __) => const SmartDownloadScreen(),
+    ),
+
+    GoRoute(
+      path: '/wrapped',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            FadeTransition(opacity: animation, child: child),
+        transitionDuration: const Duration(milliseconds: 400),
+        child: const WrappedScreen(),
+      ),
     ),
 
     GoRoute(

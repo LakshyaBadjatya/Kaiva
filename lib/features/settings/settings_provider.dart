@@ -48,6 +48,23 @@ final autoTuneCrossfadeProvider =
     StateNotifierProvider<_BoolPrefNotifier, bool>(
         (ref) => _BoolPrefNotifier(SettingsKeys.crossfadeAutoTune, false));
 
+// ── Smart Download ────────────────────────────────────────────
+final smartDownloadEnabledProvider =
+    StateNotifierProvider<_BoolPrefNotifier, bool>(
+        (ref) => _BoolPrefNotifier(SettingsKeys.smartDownloadEnabled, false));
+final smartDownloadLikedProvider =
+    StateNotifierProvider<_BoolPrefNotifier, bool>(
+        (ref) => _BoolPrefNotifier(SettingsKeys.smartDownloadLiked, true));
+final smartDownloadMostPlayedProvider =
+    StateNotifierProvider<_BoolPrefNotifier, bool>(
+        (ref) => _BoolPrefNotifier(SettingsKeys.smartDownloadMostPlayed, true));
+final smartDownloadWifiOnlyProvider =
+    StateNotifierProvider<_BoolPrefNotifier, bool>(
+        (ref) => _BoolPrefNotifier(SettingsKeys.smartDownloadWifiOnly, true));
+final smartDownloadMaxSongsProvider =
+    StateNotifierProvider<_IntPrefNotifier, int>(
+        (ref) => _IntPrefNotifier(SettingsKeys.smartDownloadMaxSongs, 50));
+
 // ── API base URL ──────────────────────────────────────────────
 final apiBaseUrlProvider = StateNotifierProvider<ApiUrlNotifier, String>(
     (ref) => ApiUrlNotifier());

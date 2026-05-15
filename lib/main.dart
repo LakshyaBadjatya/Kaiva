@@ -20,6 +20,8 @@ import 'firebase_options.dart';
 import 'core/recommender/recommender_provider.dart';
 import 'core/theme/kaiva_colors.dart';
 import 'features/downloads/download_manager.dart';
+import 'features/downloads/smart_download.dart';
+import 'features/downloads/smart_download_scheduler.dart';
 import 'features/player/audio_handler.dart';
 import 'features/player/player_provider.dart';
 // Bootstraps sync service on app start so it activates the moment the user signs in
@@ -35,6 +37,26 @@ class _AppWithSyncState extends ConsumerState<_AppWithSync> {
     super.initState();
     _restoreAudioSettings();
     _wireQueueAutoplay();
+    _initSmartDownload();
+  }
+
+  Future<void> _initSmartDownload() async {
+    final box = Hive.box('kaiva_settings');
+    final enabled = box.get(SettingsKeys.smartDownloadEnabled,
+        defaultValue: false) as bool;
+    if (!enabled) return;
+    await SmartDownloadScheduler.instance.init();
+    final wifi = box.get(SettingsKeys.smartDownloadWifiOnly,
+        defaultValue: true) as bool;
+    await SmartDownloadScheduler.instance
+        .enablePeriodic(wifiOnly: wifi);
+    // Catch up if a background wake flagged a pending sync, or just run
+    // an opportunistic pass on open.
+    if (SmartDownloadScheduler.instance.isSyncDue) {
+      SmartDownloadScheduler.instance.clearSyncDue();
+    }
+    // Fire-and-forget; engine self-guards on Wi-Fi + enabled.
+    ref.read(smartDownloadProvider).sync();
   }
 
   void _restoreAudioSettings() {
