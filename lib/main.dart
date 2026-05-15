@@ -117,21 +117,34 @@ Future<_AppDeps> _initApp() async {
   }
   ApiClient.reinitialize(ApiEndpoints.defaultBaseUrl);
 
-  // Audio service init — wrap so a platform failure doesn't abort startup.
+  // Audio service init.
+  //
+  // ANDROID: full AudioService.init() for OS-integrated background controls.
+  //
+  // iOS: AudioService.init() activates the AVAudioSession with the `audio`
+  // background capability. On a sideloaded/ad-hoc-signed build that
+  // capability validation raises a native abort (SIGABRT) that a Dart
+  // try/catch CANNOT intercept — the process is killed ~1-2s after a white
+  // screen, with no Dart-level log. So on iOS we use the bare handler
+  // (its own session config is guarded); just_audio playback still works.
   late final KaivaAudioHandler audioHandler;
-  try {
-    audioHandler = await AudioService.init(
-      builder: () => KaivaAudioHandler(),
-      config: const AudioServiceConfig(
-        androidNotificationChannelId: 'com.lakshya.kaiva.channel.audio',
-        androidNotificationChannelName: 'Kaiva',
-        androidNotificationOngoing: false,
-        androidStopForegroundOnPause: true,
-        notificationColor: Color(0xFFEF9F27),
-      ),
-    );
-  } catch (e) {
-    debugPrint('AudioService.init failed, using bare handler: $e');
+  if (Platform.isAndroid) {
+    try {
+      audioHandler = await AudioService.init(
+        builder: () => KaivaAudioHandler(),
+        config: const AudioServiceConfig(
+          androidNotificationChannelId: 'com.lakshya.kaiva.channel.audio',
+          androidNotificationChannelName: 'Kaiva',
+          androidNotificationOngoing: false,
+          androidStopForegroundOnPause: true,
+          notificationColor: Color(0xFFEF9F27),
+        ),
+      );
+    } catch (e) {
+      debugPrint('AudioService.init failed, using bare handler: $e');
+      audioHandler = KaivaAudioHandler();
+    }
+  } else {
     audioHandler = KaivaAudioHandler();
   }
 
@@ -202,7 +215,18 @@ class _SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<_SplashGate> {
-  late final Future<_AppDeps> _initFuture = _initApp();
+  Future<_AppDeps>? _initFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start init only AFTER the first frame has painted, so the branded
+    // splash is actually visible and the engine proves it can render
+    // before any risky native init (audio session, plugins) runs.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _initFuture = _initApp());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

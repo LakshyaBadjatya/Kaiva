@@ -49,7 +49,9 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
 
   KaivaAudioHandler() {
     _init();
-    LiveActivityService.instance.onAction = _handleLiveActivityAction;
+    try {
+      LiveActivityService.instance.onAction = _handleLiveActivityAction;
+    } catch (_) {/* Live Activity unavailable on sideloaded builds */}
   }
 
   void _handleLiveActivityAction(String action) {
@@ -67,18 +69,27 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   }
 
   Future<void> _init() async {
-    final session = await AudioSession.instance;
-    await session.configure(const AudioSessionConfiguration.music());
+    // Audio session configuration activates the iOS AVAudioSession with the
+    // `audio` background capability. On a sideloaded/ad-hoc-signed build that
+    // capability can fail validation and abort the process. Guard it so the
+    // app still launches; plain just_audio playback works without it.
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
 
-    // Handle audio interruptions (phone calls, headset removal)
-    session.interruptionEventStream.listen((event) {
-      if (event.begin) {
-        pause();
-      } else {
-        if (event.type == AudioInterruptionType.pause) play();
-      }
-    });
-    session.becomingNoisyEventStream.listen((_) => pause());
+      // Handle audio interruptions (phone calls, headset removal)
+      session.interruptionEventStream.listen((event) {
+        if (event.begin) {
+          pause();
+        } else {
+          if (event.type == AudioInterruptionType.pause) play();
+        }
+      });
+      session.becomingNoisyEventStream.listen((_) => pause());
+    } catch (e) {
+      // ignore: avoid_print
+      print('AudioSession configure failed (continuing): $e');
+    }
 
     // Sync just_audio state → audio_service MediaItem + playback state
     _player.sequenceStateStream.listen((state) {
