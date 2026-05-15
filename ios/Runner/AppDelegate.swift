@@ -1,40 +1,21 @@
-import ActivityKit
 import Flutter
 import UIKit
 
-// Mirror of the type defined in KaivaWidgetExtension/KaivaActivityAttributes.swift.
-// We inline it here so the Runner target does not need to import the widget target.
-@available(iOS 16.1, *)
-public struct KaivaActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        public var title: String
-        public var artist: String
-        public var albumArt: String
-        public var isPlaying: Bool
-        public var elapsedSeconds: Double
-        public var durationSeconds: Double
-    }
-    public var appName: String = "Kaiva"
-}
+// ActivityKit is only available iOS 16.1+. Importing it unconditionally crashes
+// on older OS versions, so we use a canImport guard via a separate file
+// (LiveActivityBridge.swift) and keep this file clean of ActivityKit.
 
 // ── Bridge constants — must match KaivaIntents.swift in widget target ───────
-
-private enum LiveActivityBridge {
+enum LiveActivityBridgeConstants {
     static let appGroup = "group.com.lakshya.kaiva"
     static let pendingActionKey = "kaiva.pendingPlaybackAction"
-    static let actionTimestampKey = "kaiva.pendingPlaybackActionTimestamp"
     static let darwinNotification = "com.lakshya.kaiva.playbackAction"
 }
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
 
-    // Live Activity is iOS 16.2+ only. The property must be wrapped in @available
-    // (we stash it as Any? to avoid pulling the type into the class declaration
-    // and forcing every method to be iOS-16.1-gated).
-    private var currentActivity: Any?
-
-    // Retained channel — used both for Flutter→native and native→Flutter calls.
+    private var currentActivityBridge: Any?
     private var liveActivityChannel: FlutterMethodChannel?
 
     override func application(
@@ -42,9 +23,18 @@ private enum LiveActivityBridge {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         GeneratedPluginRegistrant.register(with: self)
-        setupLiveActivityChannel()
         registerDarwinObserver()
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
+    // Scene-based apps: window is owned by the scene, so set up the channel here
+    // once the scene connects (called by FlutterAppDelegate's scene lifecycle).
+    override func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        return super.application(application, configurationForConnecting: connectingSceneSession, options: options)
     }
 
     // ── Darwin notification observer (App Intent → Flutter) ─────────────────
@@ -59,32 +49,26 @@ private enum LiveActivityBridge {
                 let me = Unmanaged<AppDelegate>.fromOpaque(observer).takeUnretainedValue()
                 me.handlePendingPlaybackAction()
             },
-            LiveActivityBridge.darwinNotification as CFString,
+            LiveActivityBridgeConstants.darwinNotification as CFString,
             nil,
             .deliverImmediately
         )
-        // Also check on launch in case an action fired while app was suspended.
         handlePendingPlaybackAction()
     }
 
     private func handlePendingPlaybackAction() {
-        guard let defaults = UserDefaults(suiteName: LiveActivityBridge.appGroup),
-              let action = defaults.string(forKey: LiveActivityBridge.pendingActionKey)
+        guard let defaults = UserDefaults(suiteName: LiveActivityBridgeConstants.appGroup),
+              let action = defaults.string(forKey: LiveActivityBridgeConstants.pendingActionKey)
         else { return }
-        defaults.removeObject(forKey: LiveActivityBridge.pendingActionKey)
+        defaults.removeObject(forKey: LiveActivityBridgeConstants.pendingActionKey)
         defaults.synchronize()
-
         DispatchQueue.main.async { [weak self] in
             self?.liveActivityChannel?.invokeMethod("onAction", arguments: ["action": action])
         }
     }
 
-    // ── Flutter ↔ Native channel ─────────────────────────────────────────────
-
-    private func setupLiveActivityChannel() {
-        guard let controller = window?.rootViewController as? FlutterViewController else {
-            return
-        }
+    // Called from SceneDelegate once the FlutterViewController is ready
+    func setupLiveActivityChannel(controller: FlutterViewController) {
         let channel = FlutterMethodChannel(
             name: "com.lakshya.kaiva/live_activity",
             binaryMessenger: controller.binaryMessenger
@@ -95,21 +79,21 @@ private enum LiveActivityBridge {
             switch call.method {
             case "start":
                 if let args = call.arguments as? [String: Any] {
-                    self.startActivity(args: args, result: result)
+                    self.startLiveActivity(args: args, result: result)
                 } else {
                     result(FlutterError(code: "BAD_ARGS", message: "Expected map", details: nil))
                 }
             case "update":
                 if let args = call.arguments as? [String: Any] {
-                    self.updateActivity(args: args, result: result)
+                    self.updateLiveActivity(args: args, result: result)
                 } else {
                     result(FlutterError(code: "BAD_ARGS", message: "Expected map", details: nil))
                 }
             case "stop":
-                self.stopActivity(result: result)
+                self.stopLiveActivity(result: result)
             case "isSupported":
                 if #available(iOS 16.2, *) {
-                    result(ActivityAuthorizationInfo().areActivitiesEnabled)
+                    result(ActivityAuthorizationInfoBridge.areActivitiesEnabled())
                 } else {
                     result(false)
                 }
@@ -119,74 +103,27 @@ private enum LiveActivityBridge {
         }
     }
 
-    // ── Activity lifecycle ───────────────────────────────────────────────────
-
-    private func startActivity(args: [String: Any], result: @escaping FlutterResult) {
-        guard #available(iOS 16.2, *) else { result(nil); return }
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { result(nil); return }
-
-        Task {
-            await self.endCurrentActivityImmediately()
-
-            let state = KaivaActivityAttributes.ContentState(
-                title: args["title"] as? String ?? "",
-                artist: args["artist"] as? String ?? "",
-                albumArt: args["albumArt"] as? String ?? "",
-                isPlaying: args["isPlaying"] as? Bool ?? false,
-                elapsedSeconds: args["elapsedSeconds"] as? Double ?? 0,
-                durationSeconds: args["durationSeconds"] as? Double ?? 0
-            )
-            let attrs = KaivaActivityAttributes()
-            let content = ActivityContent(state: state, staleDate: nil)
-
-            do {
-                let activity = try Activity.request(
-                    attributes: attrs,
-                    content: content,
-                    pushType: nil
-                )
-                self.currentActivity = activity
-                result(activity.id)
-            } catch {
-                result(FlutterError(code: "START_FAILED", message: error.localizedDescription, details: nil))
-            }
-        }
-    }
-
-    private func updateActivity(args: [String: Any], result: @escaping FlutterResult) {
-        guard #available(iOS 16.2, *) else { result(nil); return }
-        guard let activity = currentActivity as? Activity<KaivaActivityAttributes> else {
-            result(nil); return
-        }
-
-        let state = KaivaActivityAttributes.ContentState(
-            title: args["title"] as? String ?? "",
-            artist: args["artist"] as? String ?? "",
-            albumArt: args["albumArt"] as? String ?? "",
-            isPlaying: args["isPlaying"] as? Bool ?? false,
-            elapsedSeconds: args["elapsedSeconds"] as? Double ?? 0,
-            durationSeconds: args["durationSeconds"] as? Double ?? 0
-        )
-        let content = ActivityContent(state: state, staleDate: nil)
-
-        Task {
-            await activity.update(content)
+    func startLiveActivity(args: [String: Any], result: @escaping FlutterResult) {
+        if #available(iOS 16.2, *) {
+            LiveActivityManager.shared.start(args: args, result: result, storage: &currentActivityBridge)
+        } else {
             result(nil)
         }
     }
 
-    private func stopActivity(result: @escaping FlutterResult) {
-        guard #available(iOS 16.2, *) else { result(nil); return }
-        Task {
-            await self.endCurrentActivityImmediately()
+    func updateLiveActivity(args: [String: Any], result: @escaping FlutterResult) {
+        if #available(iOS 16.2, *) {
+            LiveActivityManager.shared.update(args: args, storage: currentActivityBridge, result: result)
+        } else {
             result(nil)
         }
     }
 
-    @available(iOS 16.2, *)
-    private func endCurrentActivityImmediately() async {
-        guard let activity = currentActivity as? Activity<KaivaActivityAttributes> else { return }
-        await activity.end(nil, dismissalPolicy: .immediate)
-        currentActivity = nil
+    func stopLiveActivity(result: @escaping FlutterResult) {
+        if #available(iOS 16.2, *) {
+            LiveActivityManager.shared.stop(storage: &currentActivityBridge, result: result)
+        } else {
+            result(nil)
+        }
     }
 }

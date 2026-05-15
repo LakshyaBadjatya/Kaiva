@@ -148,6 +148,12 @@ Future<_AppDeps> _initApp() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Catch all unhandled Flutter framework errors and log them without crashing.
+  FlutterError.onError = (details) {
+    debugPrint('Flutter error: ${details.exceptionAsString()}');
+    FlutterError.presentError(details);
+  };
+
   // UI chrome
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
