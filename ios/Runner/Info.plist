@@ -42,6 +42,20 @@
 		<true/>
 	</dict>
 
+	<!-- Google Sign-In: app must handle the OAuth redirect via the
+	     reversed iOS client ID URL scheme (from GoogleService-Info.plist) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.444474123870-bi6am993ev374gu41gal8c1m1rgjlme0</string>
+			</array>
+		</dict>
+	</array>
+
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

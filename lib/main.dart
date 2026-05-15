@@ -16,6 +16,7 @@ import 'core/database/database_provider.dart';
 import 'core/database/kaiva_database.dart';
 import 'core/firebase/firebase_status.dart';
 import 'core/firebase/sync_service.dart';
+import 'firebase_options.dart';
 import 'core/recommender/recommender_provider.dart';
 import 'core/theme/kaiva_colors.dart';
 import 'features/downloads/download_manager.dart';
@@ -95,10 +96,16 @@ class _AppDeps {
 }
 
 Future<_AppDeps> _initApp() async {
-  // Firebase init — MUST NOT crash the app. A bad/placeholder
-  // GoogleService-Info.plist throws here; we swallow it and run offline.
+  // Firebase init — MUST NOT crash the app. Uses compiled-in options
+  // (firebase_options.dart) so it works without a bundled native plist;
+  // the regenerated clean iOS project does not bundle GoogleService-Info.plist.
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 5), onTimeout: () {
+      debugPrint('Firebase init timed out — running without it');
+      return Firebase.app(); // returns default app or throws, caught below
+    });
     firebaseReady = true;
   } catch (e, st) {
     firebaseReady = false;
@@ -188,13 +195,11 @@ Future<_AppDeps> _initApp() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Catch all unhandled Flutter framework errors and log them without crashing.
   FlutterError.onError = (details) {
     debugPrint('Flutter error: ${details.exceptionAsString()}');
     FlutterError.presentError(details);
   };
 
-  // UI chrome
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -215,17 +220,12 @@ class _SplashGate extends StatefulWidget {
 }
 
 class _SplashGateState extends State<_SplashGate> {
-  Future<_AppDeps>? _initFuture;
+  late final Future<_AppDeps> _initFuture;
 
   @override
   void initState() {
     super.initState();
-    // Start init only AFTER the first frame has painted, so the branded
-    // splash is actually visible and the engine proves it can render
-    // before any risky native init (audio session, plugins) runs.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _initFuture = _initApp());
-    });
+    _initFuture = _initApp();
   }
 
   @override
@@ -244,7 +244,7 @@ class _SplashGateState extends State<_SplashGate> {
           );
         }
 
-        // Show branded splash while initializing
+        // Branded splash while initializing
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           home: Scaffold(
@@ -253,42 +253,37 @@ class _SplashGateState extends State<_SplashGate> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF7C6EF0), Color(0xFF5548C8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  // Actual Kaiva logo
+                  Image.asset(
+                    'assets/images/kaiva_logo.png',
+                    width: 110,
+                    height: 110,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        color: KaivaColors.accentPrimary,
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                      borderRadius: BorderRadius.all(Radius.circular(22)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x507C6EF0),
-                          blurRadius: 24,
-                          offset: Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.music_note_rounded,
-                      color: KaivaColors.textOnAccent,
-                      size: 44,
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        color: KaivaColors.textOnAccent,
+                        size: 56,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   const Text(
-                    'Kaiva',
+                    'KAIVA',
                     style: TextStyle(
                       color: KaivaColors.textPrimary,
-                      fontSize: 32,
+                      fontSize: 28,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 3,
+                      letterSpacing: 6,
                       fontFamily: 'DM Sans',
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   const Text(
                     'Your music, your world',
                     style: TextStyle(
@@ -297,7 +292,7 @@ class _SplashGateState extends State<_SplashGate> {
                       fontFamily: 'DM Sans',
                     ),
                   ),
-                  const SizedBox(height: 52),
+                  const SizedBox(height: 56),
                   const SizedBox(
                     width: 22,
                     height: 22,
@@ -308,14 +303,17 @@ class _SplashGateState extends State<_SplashGate> {
                   ),
                   if (snapshot.hasError) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      'Failed to start: ${snapshot.error}',
-                      style: const TextStyle(
-                        color: KaivaColors.error,
-                        fontSize: 12,
-                        fontFamily: 'DM Sans',
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'Failed to start: ${snapshot.error}',
+                        style: const TextStyle(
+                          color: KaivaColors.error,
+                          fontSize: 12,
+                          fontFamily: 'DM Sans',
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ],
