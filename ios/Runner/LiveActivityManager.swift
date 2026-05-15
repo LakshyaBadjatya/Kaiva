@@ -23,10 +23,13 @@ class LiveActivityManager {
     static let shared = LiveActivityManager()
     private init() {}
 
-    func start(args: [String: Any], result: @escaping FlutterResult, storage: inout Any?) {
+    // Store the activity inside the manager — avoids inout + escaping closure issues.
+    private var currentActivity: Activity<KaivaActivityAttributes>?
+
+    func start(args: [String: Any], result: @escaping FlutterResult) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { result(nil); return }
         Task {
-            await self.endCurrent(storage: &storage)
+            await self.endCurrent()
             let state = KaivaActivityAttributes.ContentState(
                 title: args["title"] as? String ?? "",
                 artist: args["artist"] as? String ?? "",
@@ -42,7 +45,7 @@ class LiveActivityManager {
                     content: content,
                     pushType: nil
                 )
-                storage = activity
+                self.currentActivity = activity
                 result(activity.id)
             } catch {
                 result(FlutterError(code: "START_FAILED", message: error.localizedDescription, details: nil))
@@ -50,8 +53,8 @@ class LiveActivityManager {
         }
     }
 
-    func update(args: [String: Any], storage: Any?, result: @escaping FlutterResult) {
-        guard let activity = storage as? Activity<KaivaActivityAttributes> else { result(nil); return }
+    func update(args: [String: Any], result: @escaping FlutterResult) {
+        guard let activity = currentActivity else { result(nil); return }
         let state = KaivaActivityAttributes.ContentState(
             title: args["title"] as? String ?? "",
             artist: args["artist"] as? String ?? "",
@@ -66,22 +69,21 @@ class LiveActivityManager {
         }
     }
 
-    func stop(storage: inout Any?, result: @escaping FlutterResult) {
+    func stop(result: @escaping FlutterResult) {
         Task {
-            await self.endCurrent(storage: &storage)
+            await self.endCurrent()
             result(nil)
         }
     }
 
-    private func endCurrent(storage: inout Any?) async {
-        if let activity = storage as? Activity<KaivaActivityAttributes> {
+    private func endCurrent() async {
+        if let activity = currentActivity {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
-        storage = nil
+        currentActivity = nil
     }
 }
 
-// Helper to check Live Activity authorization without importing ActivityKit in AppDelegate
 @available(iOS 16.2, *)
 enum ActivityAuthorizationInfoBridge {
     static func areActivitiesEnabled() -> Bool {

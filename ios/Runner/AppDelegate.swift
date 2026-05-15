@@ -15,7 +15,6 @@ enum LiveActivityBridgeConstants {
 @main
 @objc class AppDelegate: FlutterAppDelegate {
 
-    private var currentActivityBridge: Any?
     private var liveActivityChannel: FlutterMethodChannel?
 
     override func application(
@@ -105,7 +104,7 @@ enum LiveActivityBridgeConstants {
 
     func startLiveActivity(args: [String: Any], result: @escaping FlutterResult) {
         if #available(iOS 16.2, *) {
-            LiveActivityManager.shared.start(args: args, result: result, storage: &currentActivityBridge)
+            LiveActivityManager.shared.start(args: args, result: result)
         } else {
             result(nil)
         }
@@ -113,7 +112,7 @@ enum LiveActivityBridgeConstants {
 
     func updateLiveActivity(args: [String: Any], result: @escaping FlutterResult) {
         if #available(iOS 16.2, *) {
-            LiveActivityManager.shared.update(args: args, storage: currentActivityBridge, result: result)
+            LiveActivityManager.shared.update(args: args, result: result)
         } else {
             result(nil)
         }
@@ -121,7 +120,7 @@ enum LiveActivityBridgeConstants {
 
     func stopLiveActivity(result: @escaping FlutterResult) {
         if #available(iOS 16.2, *) {
-            LiveActivityManager.shared.stop(storage: &currentActivityBridge, result: result)
+            LiveActivityManager.shared.stop(result: result)
         } else {
             result(nil)
         }
