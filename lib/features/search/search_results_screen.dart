@@ -43,18 +43,50 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '"${widget.query}"',
-          style: KaivaTextStyles.titleLarge,
-          overflow: TextOverflow.ellipsis,
+        backgroundColor: KaivaColors.backgroundPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          color: KaivaColors.textPrimary,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'SEARCH',
+              style: KaivaTextStyles.labelSmall.copyWith(
+                color: KaivaColors.textMuted,
+                letterSpacing: 1.4,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              widget.query,
+              style: KaivaTextStyles.headlineMedium.copyWith(
+                color: KaivaColors.accentBright,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
         bottom: TabBar(
           controller: _tabCtrl,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: KaivaSpacing.marginMobile),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 14),
           tabs: _tabs.map((t) => Tab(text: t)).toList(),
           labelColor: KaivaColors.accentPrimary,
-          unselectedLabelColor: KaivaColors.textSecondary,
-          indicatorColor: KaivaColors.accentPrimary,
-          indicatorWeight: 2,
+          unselectedLabelColor: KaivaColors.textMuted,
+          labelStyle: KaivaTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+          unselectedLabelStyle: KaivaTextStyles.labelLarge,
+          indicator: const UnderlineTabIndicator(
+            borderSide: BorderSide(color: KaivaColors.accentPrimary, width: 2),
+            insets: EdgeInsets.symmetric(horizontal: 12),
+          ),
+          dividerColor: KaivaColors.borderSubtle,
         ),
       ),
       body: TabBarView(
@@ -218,29 +250,35 @@ class _AlbumGridItem extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KaivaRadius.md),
               child: CachedNetworkImage(
                 imageUrl: album.highResArtworkUrl,
                 fit: BoxFit.cover,
                 width: double.infinity,
-                placeholder: (_, __) => Container(color: KaivaColors.backgroundTertiary),
-                errorWidget: (_, __, ___) =>
-                    Container(color: KaivaColors.backgroundTertiary,
-                      child: const Icon(Icons.album_outlined, color: KaivaColors.textMuted)),
+                placeholder: (_, __) =>
+                    Container(color: KaivaColors.surfaceContainerHigh),
+                errorWidget: (_, __, ___) => Container(
+                  color: KaivaColors.surfaceContainerHigh,
+                  child: const Icon(Icons.album_outlined, color: KaivaColors.textMuted),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: KaivaSpacing.sm),
           Text(
             album.name,
-            style: KaivaTextStyles.titleMedium,
+            style: KaivaTextStyles.titleLarge.copyWith(fontSize: 16),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          const SizedBox(height: 2),
           if (album.artistName != null)
             Text(
               album.artistName!,
-              style: KaivaTextStyles.bodySmall,
+              style: KaivaTextStyles.labelLarge.copyWith(
+                color: KaivaColors.textSecondary,
+                fontWeight: FontWeight.w400,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

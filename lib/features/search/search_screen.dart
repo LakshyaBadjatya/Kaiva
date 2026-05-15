@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/song.dart';
@@ -133,37 +134,48 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Editorial Noir input: filled #1a1a1a, underlined; focus → warm-sand bottom border
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        KaivaSpacing.marginMobile, KaivaSpacing.sm, KaivaSpacing.marginMobile, KaivaSpacing.base,
+      ),
       child: TextField(
         controller: controller,
         focusNode: focusNode,
         onChanged: onChanged,
         onSubmitted: onSubmitted,
         textInputAction: TextInputAction.search,
-        style: KaivaTextStyles.bodyMedium,
+        style: KaivaTextStyles.labelLarge,
+        cursorColor: KaivaColors.accentPrimary,
         decoration: InputDecoration(
-          hintText: 'Songs, artists, albums…',
-          hintStyle: KaivaTextStyles.bodyMedium.copyWith(
+          hintText: 'Search artists, songs, podcasts...',
+          hintStyle: KaivaTextStyles.labelLarge.copyWith(
             color: KaivaColors.textMuted,
+            fontWeight: FontWeight.w400,
           ),
-          prefixIcon: const Icon(Icons.search_rounded, color: KaivaColors.textMuted),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(left: 4, right: 4),
+            child: Icon(Icons.search_rounded, color: KaivaColors.textMuted, size: 22),
+          ),
+          prefixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           suffixIcon: isActive
               ? IconButton(
-                  icon: const Icon(Icons.close_rounded, color: KaivaColors.textMuted),
+                  icon: const Icon(Icons.close_rounded, color: KaivaColors.textMuted, size: 20),
                   onPressed: onClear,
+                  splashRadius: 18,
                 )
               : null,
           filled: true,
-          fillColor: KaivaColors.backgroundTertiary,
-          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+          fillColor: KaivaColors.surfaceContainerHighest,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          border: const UnderlineInputBorder(
+            borderSide: BorderSide(color: KaivaColors.borderDefault, width: 1),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: KaivaColors.accentPrimary, width: 1.5),
+          enabledBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: KaivaColors.borderDefault, width: 1),
+          ),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: KaivaColors.accentPrimary, width: 1.5),
           ),
         ),
       ),
@@ -188,51 +200,132 @@ class _IdleView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (recentSongs.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.history_rounded, size: 48, color: KaivaColors.textMuted),
-            const SizedBox(height: 12),
-            Text(
-              'Songs you play from search\nwill appear here',
-              style: KaivaTextStyles.bodyMedium.copyWith(color: KaivaColors.textMuted),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: KaivaSpacing.marginMobile),
       children: [
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Recent', style: KaivaTextStyles.sectionHeader),
-            TextButton(
-              onPressed: onClearAll,
-              child: Text(
-                'Clear all',
-                style: KaivaTextStyles.bodySmall.copyWith(
-                  color: KaivaColors.textMuted,
+        if (recentSongs.isNotEmpty) ...[
+          const SizedBox(height: KaivaSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: KaivaSpacing.sm),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recent Searches',
+                  style: KaivaTextStyles.headlineMedium,
                 ),
-              ),
+                TextButton(
+                  onPressed: onClearAll,
+                  style: TextButton.styleFrom(
+                    foregroundColor: KaivaColors.textMuted,
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: Text(
+                    'CLEAR ALL',
+                    style: KaivaTextStyles.labelSmall.copyWith(
+                      color: KaivaColors.textMuted,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        ...recentSongs.map(
-          (song) => _RecentSongRow(
-            song: song,
-            onTap: () => onRecentSongTap(song),
-            onDelete: () => onRecentDelete(song.id),
+          ),
+          ...recentSongs.map(
+            (song) => _RecentSongRow(
+              song: song,
+              onTap: () => onRecentSongTap(song),
+              onDelete: () => onRecentDelete(song.id),
+            ),
+          ),
+          const SizedBox(height: KaivaSpacing.xl),
+        ],
+        // Browse categories — always visible
+        Padding(
+          padding: const EdgeInsets.only(
+            top: KaivaSpacing.sm,
+            bottom: KaivaSpacing.md,
+          ),
+          child: Text(
+            'Browse All',
+            style: KaivaTextStyles.headlineLarge,
           ),
         ),
-        const SizedBox(height: 80),
+        _BrowseCategoriesGrid(),
+        const SizedBox(height: 120),
       ],
+    );
+  }
+}
+
+// Editorial Noir browse-all grid: 2-col gradient tiles with Playfair labels
+class _BrowseCategoriesGrid extends StatelessWidget {
+  static const _categories = <({String label, IconData icon, List<Color> gradient, String query})>[
+    (label: 'Pop',         icon: Icons.music_note_rounded,        gradient: [Color(0xFFEF9F27), Color(0xFFBA7517)], query: 'pop hits'),
+    (label: 'Hip Hop',     icon: Icons.graphic_eq_rounded,        gradient: [Color(0xFF8CD4FF), Color(0xFF004C6A)], query: 'hip hop'),
+    (label: 'Romance',     icon: Icons.favorite_outline_rounded,  gradient: [Color(0xFFFFBF6F), Color(0xFF855400)], query: 'romantic love'),
+    (label: 'Chill',       icon: Icons.waves_rounded,             gradient: [Color(0xFF37BBF8), Color(0xFF00344A)], query: 'chill relax'),
+    (label: 'Workout',     icon: Icons.fitness_center_rounded,    gradient: [Color(0xFFEF9F27), Color(0xFF462A00)], query: 'workout energy'),
+    (label: 'Focus',       icon: Icons.self_improvement_rounded,  gradient: [Color(0xFF7FD0FF), Color(0xFF004864)], query: 'focus study'),
+    (label: 'Party',       icon: Icons.celebration_rounded,       gradient: [Color(0xFFFFB95D), Color(0xFF653E00)], query: 'party hits'),
+    (label: 'Devotional',  icon: Icons.temple_hindu_outlined,     gradient: [Color(0xFFFFDDB7), Color(0xFF462A00)], query: 'devotional bhajan'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _categories.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisExtent: 96,
+        crossAxisSpacing: KaivaSpacing.sm,
+        mainAxisSpacing: KaivaSpacing.sm,
+      ),
+      itemBuilder: (context, i) {
+        final cat = _categories[i];
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            context.push('/search/results?q=${Uri.encodeComponent(cat.query)}');
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: cat.gradient,
+              ),
+              borderRadius: BorderRadius.circular(KaivaRadius.md),
+              border: Border.all(color: KaivaColors.borderSubtle, width: 1),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -8,
+                  bottom: -8,
+                  child: Icon(
+                    cat.icon,
+                    size: 64,
+                    color: Colors.black.withValues(alpha: 0.25),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(KaivaSpacing.md),
+                  child: Text(
+                    cat.label,
+                    style: KaivaTextStyles.titleLarge.copyWith(
+                      color: KaivaColors.backgroundPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

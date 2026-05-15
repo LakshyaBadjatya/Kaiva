@@ -411,9 +411,23 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Editorial Noir section header: Playfair, underlined with border-white@10%
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-      child: Text(title, style: KaivaTextStyles.sectionHeader),
+      padding: const EdgeInsets.fromLTRB(
+        KaivaSpacing.marginMobile,
+        KaivaSpacing.xl,
+        KaivaSpacing.marginMobile,
+        KaivaSpacing.sm,
+      ),
+      child: Container(
+        padding: const EdgeInsets.only(bottom: KaivaSpacing.xs),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: KaivaColors.borderSubtle, width: 1),
+          ),
+        ),
+        child: Text(title, style: KaivaTextStyles.headlineMedium),
+      ),
     );
   }
 }

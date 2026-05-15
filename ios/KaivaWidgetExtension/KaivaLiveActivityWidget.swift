@@ -184,21 +184,30 @@ struct KaivaLockScreenView: View {
 
             // Controls
             HStack(spacing: 40) {
-                controlButton(
-                    systemName: "backward.fill",
-                    size: 24,
-                    intentBuilder: { KaivaPreviousIntent() }
-                )
-                controlButton(
-                    systemName: state.isPlaying ? "pause.fill" : "play.fill",
-                    size: 32,
-                    intentBuilder: { KaivaPlayPauseIntent() }
-                )
-                controlButton(
-                    systemName: "forward.fill",
-                    size: 24,
-                    intentBuilder: { KaivaNextIntent() }
-                )
+                if #available(iOS 17.0, *) {
+                    controlButton(
+                        systemName: "backward.fill",
+                        size: 24,
+                        intentBuilder: { KaivaPreviousIntent() }
+                    )
+                    controlButton(
+                        systemName: state.isPlaying ? "pause.fill" : "play.fill",
+                        size: 32,
+                        intentBuilder: { KaivaPlayPauseIntent() }
+                    )
+                    controlButton(
+                        systemName: "forward.fill",
+                        size: 24,
+                        intentBuilder: { KaivaNextIntent() }
+                    )
+                } else {
+                    staticControl(systemName: "backward.fill", size: 24)
+                    staticControl(
+                        systemName: state.isPlaying ? "pause.fill" : "play.fill",
+                        size: 32
+                    )
+                    staticControl(systemName: "forward.fill", size: 24)
+                }
             }
             .padding(.top, 2)
         }
@@ -207,26 +216,28 @@ struct KaivaLockScreenView: View {
         .background(KaivaPalette.background)
     }
 
+    @available(iOS 17.0, *)
     @ViewBuilder
     private func controlButton<I: AppIntent>(
         systemName: String,
         size: CGFloat,
         intentBuilder: @escaping () -> I
     ) -> some View {
-        if #available(iOS 17.0, *) {
-            Button(intent: intentBuilder()) {
-                Image(systemName: systemName)
-                    .font(.system(size: size, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: size + 16, height: size + 16)
-            }
-            .buttonStyle(.plain)
-        } else {
+        Button(intent: intentBuilder()) {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .semibold))
-                .foregroundColor(.white.opacity(0.85))
+                .foregroundColor(.white)
                 .frame(width: size + 16, height: size + 16)
         }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func staticControl(systemName: String, size: CGFloat) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: size, weight: .semibold))
+            .foregroundColor(.white.opacity(0.85))
+            .frame(width: size + 16, height: size + 16)
     }
 }
 
@@ -329,21 +340,30 @@ struct KaivaLiveActivityWidget: Widget {
                 // Bottom region: prev / play-pause / next
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 40) {
-                        expandedControl(
-                            systemName: "backward.fill",
-                            size: 26,
-                            intentBuilder: { KaivaPreviousIntent() }
-                        )
-                        expandedControl(
-                            systemName: context.state.isPlaying ? "pause.fill" : "play.fill",
-                            size: 36,
-                            intentBuilder: { KaivaPlayPauseIntent() }
-                        )
-                        expandedControl(
-                            systemName: "forward.fill",
-                            size: 26,
-                            intentBuilder: { KaivaNextIntent() }
-                        )
+                        if #available(iOS 17.0, *) {
+                            expandedControl(
+                                systemName: "backward.fill",
+                                size: 26,
+                                intentBuilder: { KaivaPreviousIntent() }
+                            )
+                            expandedControl(
+                                systemName: context.state.isPlaying ? "pause.fill" : "play.fill",
+                                size: 36,
+                                intentBuilder: { KaivaPlayPauseIntent() }
+                            )
+                            expandedControl(
+                                systemName: "forward.fill",
+                                size: 26,
+                                intentBuilder: { KaivaNextIntent() }
+                            )
+                        } else {
+                            staticControl(systemName: "backward.fill", size: 26)
+                            staticControl(
+                                systemName: context.state.isPlaying ? "pause.fill" : "play.fill",
+                                size: 36
+                            )
+                            staticControl(systemName: "forward.fill", size: 26)
+                        }
                     }
                     .padding(.bottom, 6)
                 }
@@ -358,23 +378,25 @@ struct KaivaLiveActivityWidget: Widget {
         }
     }
 
+    @available(iOS 17.0, *)
     @ViewBuilder
     private func expandedControl<I: AppIntent>(
         systemName: String,
         size: CGFloat,
         intentBuilder: @escaping () -> I
     ) -> some View {
-        if #available(iOS 17.0, *) {
-            Button(intent: intentBuilder()) {
-                Image(systemName: systemName)
-                    .font(.system(size: size, weight: .semibold))
-                    .foregroundColor(.white)
-            }
-            .buttonStyle(.plain)
-        } else {
+        Button(intent: intentBuilder()) {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .semibold))
-                .foregroundColor(.white.opacity(0.85))
+                .foregroundColor(.white)
         }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func staticControl(systemName: String, size: CGFloat) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: size, weight: .semibold))
+            .foregroundColor(.white.opacity(0.85))
     }
 }
