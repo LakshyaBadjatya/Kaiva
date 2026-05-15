@@ -23,7 +23,19 @@ workflows:
         script: dart run build_runner build --delete-conflicting-outputs
 
       - name: Write GoogleService-Info.plist
-        script: printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+        script: |
+          if [ -z "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "ERROR: GOOGLE_SERVICE_INFO_PLIST env var is empty. Add it to the GOOGLE_SERVICE_INFO_PLIST group in Codemagic as a base64-encoded plist."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          # Verify it's a valid plist (must start with <?xml or be binary plist)
+          if ! head -c 5 ios/Runner/GoogleService-Info.plist | grep -q "<?xml\|bplist"; then
+            echo "ERROR: Decoded GoogleService-Info.plist is not a valid plist. Re-encode the file with: base64 -i GoogleService-Info.plist | tr -d '\n'"
+            head -c 200 ios/Runner/GoogleService-Info.plist
+            exit 1
+          fi
+          echo "GoogleService-Info.plist written ($(wc -c < ios/Runner/GoogleService-Info.plist) bytes)"
 
       - name: Pod install
         script: cd ios && pod install --repo-update
