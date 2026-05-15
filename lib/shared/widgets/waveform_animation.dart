@@ -28,6 +28,7 @@ class _WaveformAnimationState extends State<WaveformAnimation>
     with TickerProviderStateMixin {
   late final List<AnimationController> _controllers;
   late final List<Animation<double>> _animations;
+  final _rng = math.Random();
 
   static const _speeds = [320, 450, 280, 380];
   static const _phases = [0.0, 0.4, 0.8, 0.2];
@@ -48,7 +49,33 @@ class _WaveformAnimationState extends State<WaveformAnimation>
       );
     });
 
+    // Re-randomise each bar's peak height + tempo when it completes a
+    // half-cycle, so the bars look like they're reacting to music
+    // instead of looping a fixed pattern.
+    for (var i = 0; i < _controllers.length; i++) {
+      _controllers[i].addStatusListener((status) {
+        if (!mounted || !widget.isPlaying) return;
+        if (status == AnimationStatus.completed ||
+            status == AnimationStatus.dismissed) {
+          _reseed(i);
+        }
+      });
+    }
+
     _startOrStop();
+  }
+
+  void _reseed(int i) {
+    final peak = 0.45 + _rng.nextDouble() * 0.55; // 0.45–1.0
+    _animations[i] = Tween<double>(
+      begin: 0.15 + _rng.nextDouble() * 0.2,
+      end: peak,
+    ).animate(
+      CurvedAnimation(parent: _controllers[i], curve: Curves.easeInOut),
+    );
+    _controllers[i].duration = Duration(
+      milliseconds: 220 + _rng.nextInt(260), // 220–480ms — varied tempo
+    );
   }
 
   void _startOrStop() {

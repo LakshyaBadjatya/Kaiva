@@ -8,6 +8,7 @@ import 'package:rxdart/rxdart.dart';
 import '../../core/database/kaiva_database.dart' show KaivaDatabase;
 import '../../core/models/song.dart';
 import '../../core/utils/live_activity_service.dart';
+import 'crossfade_analyzer.dart';
 
 class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -17,6 +18,17 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
   Timer? _crossfadeTimer;
   StreamSubscription<Duration>? _positionSub;
   bool _isCrossfading = false;
+
+  // ── Auto-tune crossfade ───────────────────────────────────────
+  bool _autoTuneCrossfade = false;
+  void setAutoTuneCrossfade(bool enabled) => _autoTuneCrossfade = enabled;
+  bool get autoTuneCrossfade => _autoTuneCrossfade;
+
+  /// Effective crossfade for the current track: when auto-tune is on, the
+  /// user's base value is reduced by however much trailing silence the
+  /// track already has (so silent endings get a short blend, abrupt ones
+  /// get the full value), clamped to a sane 2–12s window.
+  int _effectiveCrossfadeSeconds = 0;
 
   // Sleep timer — stop after current track ends
   bool stopAfterCurrentTrack = false;
@@ -286,6 +298,21 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
     _trackStartTime = DateTime.now();
     _db?.recentlyPlayedDao.recordPlay(songId);
 
+    // Re-tune the crossfade for this track in the background. item.id is
+    // the playable source (local path or stream URL).
+    if (_autoTuneCrossfade && _crossfadeSeconds > 0) {
+      CrossfadeAnalyzer.instance
+          .profileFor(songId: songId, source: item.id)
+          .then((p) {
+        final tuned = (_crossfadeSeconds - p.trailingSilence).round();
+        _effectiveCrossfadeSeconds = tuned.clamp(2, 12);
+      }).catchError((_) {
+        _effectiveCrossfadeSeconds = _crossfadeSeconds;
+      });
+    } else {
+      _effectiveCrossfadeSeconds = _crossfadeSeconds;
+    }
+
     final artUrl = (item.artUri?.toString() ?? '')
         .replaceAll('150x150', '500x500');
     LiveActivityService.instance.start(
@@ -344,6 +371,7 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
 
   Future<void> setCrossfade(int seconds) async {
     _crossfadeSeconds = seconds;
+    _effectiveCrossfadeSeconds = seconds;
     _positionSub?.cancel();
     _positionSub = null;
     if (seconds > 0) {
@@ -356,8 +384,9 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
 
   void _onPosition(Duration position) {
     final duration = _player.duration;
-    if (duration == null || _crossfadeSeconds == 0) return;
-    final fadeStart = duration - Duration(seconds: _crossfadeSeconds);
+    final cf = _effectiveCrossfadeSeconds;
+    if (duration == null || cf == 0) return;
+    final fadeStart = duration - Duration(seconds: cf);
     if (position >= fadeStart && !_isCrossfading) {
       _startCrossfade(duration - position);
     } else if (position < fadeStart && _isCrossfading) {

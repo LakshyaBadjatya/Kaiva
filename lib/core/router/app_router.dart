@@ -13,8 +13,12 @@ import '../../features/playlist/playlist_detail_screen.dart';
 import '../../features/stats/stats_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/widgets/equalizer_screen.dart';
+import '../../features/settings/widgets/crossfade_screen.dart';
 import '../../features/settings/widgets/spotify_import_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/mood/mood_mix_screen.dart';
+import '../../features/car_mode/car_mode_screen.dart';
+import '../../features/identify/identify_screen.dart';
 import '../../shared/widgets/kaiva_scaffold.dart';
 import '../../core/utils/settings_keys.dart';
 
@@ -124,8 +128,32 @@ final appRouter = GoRouter(
     ),
 
     GoRoute(
+      path: '/settings/crossfade',
+      builder: (_, __) => const CrossfadeScreen(),
+    ),
+
+    GoRoute(
       path: '/settings/spotify-import',
       builder: (_, __) => const SpotifyImportScreen(),
+    ),
+
+    GoRoute(
+      path: '/mood-mix',
+      builder: (_, __) => const MoodMixScreen(),
+    ),
+
+    GoRoute(
+      path: '/identify',
+      builder: (_, __) => const IdentifyScreen(),
+    ),
+
+    GoRoute(
+      path: '/car-mode',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+            FadeTransition(opacity: animation, child: child),
+        child: const CarModeScreen(),
+      ),
     ),
   ],
 );

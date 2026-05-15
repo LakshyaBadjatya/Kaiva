@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/ai/ai_config.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/database/database_provider.dart';
@@ -89,10 +90,17 @@ class _SpotifyImportScreenState extends ConsumerState<SpotifyImportScreen> {
   // ── Spotify public API helpers ────────────────────────────────
 
   Future<void> _authenticate() async {
-    // Spotify client credentials flow using the public demo credentials.
-    // These only allow reading public playlists — no user data is accessed.
-    const clientId     = 'YOUR_SPOTIFY_CLIENT_ID';
-    const clientSecret = 'YOUR_SPOTIFY_CLIENT_SECRET';
+    // Spotify client credentials flow — reads public playlists only.
+    // Credentials live in AiConfig (create an app at
+    // https://developer.spotify.com/dashboard).
+    if (!AiConfig.hasSpotifyCredentials) {
+      throw Exception(
+        'Spotify import is not configured. Add a Client ID and Secret '
+        'in lib/core/ai/ai_config.dart to enable it.',
+      );
+    }
+    final clientId     = AiConfig.spotifyClientId;
+    final clientSecret = AiConfig.spotifyClientSecret;
 
     final credentials = base64Encode(utf8.encode('$clientId:$clientSecret'));
     final resp = await Dio().post(
@@ -199,7 +207,10 @@ class _SpotifyImportScreenState extends ConsumerState<SpotifyImportScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = 'Could not load playlists. Make sure your Spotify profile is public.';
+        _error = !AiConfig.hasSpotifyCredentials
+            ? 'Spotify import isn\'t set up. Add a Client ID & Secret in '
+                'lib/core/ai/ai_config.dart to enable it.'
+            : 'Could not load playlists. Make sure your Spotify profile is public.';
       });
     }
   }

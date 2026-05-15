@@ -164,7 +164,16 @@ class _SearchBar extends StatelessWidget {
                   onPressed: onClear,
                   splashRadius: 18,
                 )
-              : null,
+              : IconButton(
+                  icon: const Icon(Icons.graphic_eq_rounded,
+                      color: KaivaColors.accentPrimary, size: 22),
+                  tooltip: 'Identify song',
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    context.push('/identify');
+                  },
+                  splashRadius: 18,
+                ),
           filled: true,
           fillColor: KaivaColors.surfaceContainerHighest,
           contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),

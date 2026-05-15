@@ -19,6 +19,7 @@ import 'widgets/queue_sheet.dart';
 import 'widgets/sleep_timer_sheet.dart';
 import '../../shared/widgets/waveform_animation.dart';
 import '../../shared/widgets/song_options_sheet.dart';
+import '../../shared/widgets/celebration_overlay.dart';
 import 'widgets/fullscreen_art_view.dart';
 
 class PlayerScreen extends ConsumerStatefulWidget {
@@ -121,7 +122,8 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   Widget _buildContent(Song song) {
     final handler = ref.read(audioHandlerProvider);
     return GestureDetector(
-      onHorizontalDragUpdate: (d) => _dragDeltaX += d.delta.dx,
+      onHorizontalDragUpdate: (d) =>
+          setState(() => _dragDeltaX += d.delta.dx),
       onHorizontalDragEnd: (d) {
         if (_dragDeltaX < -60) {
           HapticFeedback.lightImpact();
@@ -132,7 +134,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
           setState(() => _skipDirection = -1);
           handler.skipToPrevious();
         }
-        _dragDeltaX = 0;
+        setState(() => _dragDeltaX = 0);
       },
       onVerticalDragUpdate: (d) => _dragDeltaY += d.delta.dy,
       onVerticalDragEnd: (d) {
@@ -147,48 +149,62 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
       children: [
         _buildTopBar(song),
         const SizedBox(height: 16),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 320),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          layoutBuilder: (currentChild, previousChildren) => Stack(
+        SizedBox(
+          height: 280,
+          child: Stack(
             alignment: Alignment.center,
             children: [
-              ...previousChildren,
-              if (currentChild != null) currentChild,
-            ],
-          ),
-          transitionBuilder: (child, anim) {
-            final isIncoming = child.key == ValueKey(song.id);
-            final beginOffset = isIncoming
-                ? Offset(_skipDirection.toDouble(), 0)
-                : Offset.zero;
-            final endOffset = isIncoming
-                ? Offset.zero
-                : Offset(-_skipDirection.toDouble(), 0);
-            return SlideTransition(
-              position: Tween<Offset>(begin: beginOffset, end: endOffset)
-                  .animate(anim),
-              child: FadeTransition(opacity: anim, child: child),
-            );
-          },
-          child: KeyedSubtree(
-            key: ValueKey(song.id),
-            child: _AlbumArtWidget(
-              song: song,
-              onTap: () => Navigator.of(context).push(
-                PageRouteBuilder(
-                  opaque: false,
-                  barrierColor: Colors.transparent,
-                  pageBuilder: (_, __, ___) => FullscreenArtView(song: song),
-                  transitionsBuilder: (_, anim, __, child) => FadeTransition(
-                    opacity: anim,
-                    child: child,
+              // Directional drag ghost (skip preview hint)
+              _DragGhost(dragDeltaX: _dragDeltaX),
+              Transform.translate(
+                offset: Offset(_dragDeltaX.clamp(-60.0, 60.0) * 0.4, 0),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  layoutBuilder: (currentChild, previousChildren) => Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
+                    ],
                   ),
-                  transitionDuration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, anim) {
+                    final isIncoming = child.key == ValueKey(song.id);
+                    final beginOffset = isIncoming
+                        ? Offset(_skipDirection.toDouble(), 0)
+                        : Offset.zero;
+                    final endOffset = isIncoming
+                        ? Offset.zero
+                        : Offset(-_skipDirection.toDouble(), 0);
+                    return SlideTransition(
+                      position:
+                          Tween<Offset>(begin: beginOffset, end: endOffset)
+                              .animate(anim),
+                      child: FadeTransition(opacity: anim, child: child),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(song.id),
+                    child: _AlbumArtWidget(
+                      song: song,
+                      onTap: () => Navigator.of(context).push(
+                        PageRouteBuilder(
+                          opaque: false,
+                          barrierColor: Colors.transparent,
+                          pageBuilder: (_, __, ___) =>
+                              FullscreenArtView(song: song),
+                          transitionsBuilder: (_, anim, __, child) =>
+                              FadeTransition(opacity: anim, child: child),
+                          transitionDuration:
+                              const Duration(milliseconds: 300),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
         const SizedBox(height: 24),
@@ -229,6 +245,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   Widget _buildTopBar(Song song) {
     final timerActive = ref.watch(sleepTimerActiveProvider);
     final timerRemaining = ref.watch(sleepTimerRemainingProvider);
+    final timerTotal = ref.watch(sleepTimerTotalProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -258,9 +275,41 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.bedtime_outlined,
-                      size: 14, color: KaivaColors.accentPrimary),
-                  const SizedBox(width: 2),
+                  SizedBox(
+                    width: 26,
+                    height: 26,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // End-of-track has no fixed total → indeterminate dot.
+                        if (timerTotal.inSeconds > 0 &&
+                            timerRemaining.inSeconds >= 0)
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(
+                              begin: 0,
+                              end: (timerRemaining.inMilliseconds /
+                                      timerTotal.inMilliseconds)
+                                  .clamp(0.0, 1.0),
+                            ),
+                            duration: const Duration(milliseconds: 400),
+                            builder: (_, value, __) => SizedBox(
+                              width: 26,
+                              height: 26,
+                              child: CircularProgressIndicator(
+                                value: value,
+                                strokeWidth: 2,
+                                backgroundColor: KaivaColors.borderSubtle,
+                                valueColor: const AlwaysStoppedAnimation(
+                                    KaivaColors.accentPrimary),
+                              ),
+                            ),
+                          ),
+                        const Icon(Icons.bedtime_outlined,
+                            size: 13, color: KaivaColors.accentPrimary),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   Text(
                     _formatTimerRemaining(timerRemaining),
                     style: KaivaTextStyles.labelSmall
@@ -269,6 +318,15 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                 ],
               ),
             ),
+          IconButton(
+            icon: const Icon(Icons.directions_car_rounded, size: 22),
+            color: KaivaColors.textSecondary,
+            tooltip: 'Car Mode',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              context.push('/car-mode');
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.more_vert, size: 24),
             color: KaivaColors.textSecondary,
@@ -490,45 +548,127 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 // ── Album art — isolated widget with RepaintBoundary ──────────
 // Watches isPlayingProvider independently so rotation changes
 // never cause the parent PlayerScreen to rebuild.
-class _AlbumArtWidget extends ConsumerWidget {
+class _AlbumArtWidget extends ConsumerStatefulWidget {
   final Song song;
   final VoidCallback? onTap;
 
   const _AlbumArtWidget({required this.song, this.onTap});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AlbumArtWidget> createState() => _AlbumArtWidgetState();
+}
+
+class _AlbumArtWidgetState extends ConsumerState<_AlbumArtWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin;
+
+  @override
+  void initState() {
+    super.initState();
+    // 12s per full rotation, per spec.
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    );
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  void _syncSpin(bool isPlaying) {
+    if (isPlaying) {
+      if (!_spin.isAnimating) _spin.repeat();
+    } else {
+      if (_spin.isAnimating) _spin.stop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final isPlaying = ref.watch(isPlayingProvider);
+    // Defer controller mutation until after build.
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _syncSpin(isPlaying));
 
     return RepaintBoundary(
       child: GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: AnimatedScale(
           scale: isPlaying ? 1.0 : 0.92,
           duration: const Duration(milliseconds: 300),
           child: Hero(
-            tag: 'album_art_${song.id}',
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: CachedNetworkImage(
-                imageUrl: song.highResArtworkUrl,
-                width: 280,
-                height: 280,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+            tag: 'album_art_${widget.song.id}',
+            child: RotationTransition(
+              turns: _spin,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(140),
+                child: CachedNetworkImage(
+                  imageUrl: widget.song.highResArtworkUrl,
                   width: 280,
                   height: 280,
-                  color: KaivaColors.backgroundTertiary,
-                  child: const Icon(Icons.music_note,
-                      color: KaivaColors.textMuted, size: 80),
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    width: 280,
+                    height: 280,
+                    color: KaivaColors.backgroundTertiary,
+                    child: const Icon(Icons.music_note,
+                        color: KaivaColors.textMuted, size: 80),
+                  ),
+                  errorWidget: (_, __, ___) => Container(
+                    width: 280,
+                    height: 280,
+                    color: KaivaColors.backgroundTertiary,
+                    child: const Icon(Icons.music_note,
+                        color: KaivaColors.textMuted, size: 80),
+                  ),
                 ),
-                errorWidget: (_, __, ___) => Container(
-                  width: 280,
-                  height: 280,
-                  color: KaivaColors.backgroundTertiary,
-                  child: const Icon(Icons.music_note,
-                      color: KaivaColors.textMuted, size: 80),
-                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Drag ghost (skip-direction hint while swiping) ────────────
+class _DragGhost extends StatelessWidget {
+  final double dragDeltaX;
+  const _DragGhost({required this.dragDeltaX});
+
+  @override
+  Widget build(BuildContext context) {
+    final mag = dragDeltaX.abs();
+    if (mag < 8) return const SizedBox.shrink();
+    final progress = (mag / 60).clamp(0.0, 1.0);
+    final goingNext = dragDeltaX < 0;
+
+    return Align(
+      alignment: goingNext ? Alignment.centerRight : Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Opacity(
+          opacity: progress * 0.9,
+          child: Transform.scale(
+            scale: 0.7 + progress * 0.3,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: KaivaColors.accentGlow,
+                border: Border.all(
+                    color: KaivaColors.accentPrimary, width: 1),
+              ),
+              child: Icon(
+                goingNext
+                    ? Icons.skip_next_rounded
+                    : Icons.skip_previous_rounded,
+                color: KaivaColors.accentPrimary,
+                size: 30,
               ),
             ),
           ),
@@ -597,6 +737,7 @@ class _LikeButton extends ConsumerWidget {
             await db.likedSongsDao.toggleLike(song.id);
             if (!isLiked) {
               ref.read(syncServiceProvider).pushLikedSong(song.id);
+              celebrateFirstLikeIfNeeded(ref);
             } else {
               ref.read(syncServiceProvider).removeLikedSong(song.id);
             }

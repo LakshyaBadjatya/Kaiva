@@ -12,7 +12,6 @@ import '../../core/firebase/sync_service.dart';
 import '../../core/theme/kaiva_colors.dart';
 import '../../core/theme/kaiva_text_styles.dart';
 import '../auth/auth_screen.dart';
-import '../player/player_provider.dart';
 import '../search/search_provider.dart';
 import 'settings_provider.dart';
 
@@ -50,13 +49,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeModeProvider);
     final streamQuality = ref.watch(streamQualityProvider);
     final downloadQuality = ref.watch(downloadQualityProvider);
     final storageLimit = ref.watch(storageLimitProvider);
     final wifiOnly = ref.watch(wifiOnlyProvider);
-    final gapless = ref.watch(gaplessPlaybackProvider);
-    final normalize = ref.watch(volumeNormalizeProvider);
     final mono = ref.watch(monoAudioProvider);
     final crossfade = ref.watch(crossfadeProvider);
 
@@ -99,19 +95,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             onTap: () => context.push('/settings/spotify-import'),
           ),
 
-          // ── Appearance ───────────────────────────────────
-          const _Header('Appearance'),
-          _DropdownTile<ThemeMode>(
-            label: 'Theme',
-            value: themeMode,
-            items: const [
-              DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
-              DropdownMenuItem(value: ThemeMode.dark,   child: Text('Dark')),
-              DropdownMenuItem(value: ThemeMode.light,  child: Text('Light')),
-            ],
-            onChanged: (m) => m != null ? ref.read(themeModeProvider.notifier).setMode(m) : null,
-          ),
-
           // ── Playback ─────────────────────────────────────
           const _Header('Playback'),
           _DropdownTile<String>(
@@ -124,29 +107,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
             onChanged: (v) => v != null ? ref.read(streamQualityProvider.notifier).set(v) : null,
           ),
-          _SliderTile(
-            label: 'Crossfade',
-            valueLabel: crossfade == 0 ? 'Off' : '$crossfade s',
-            value: crossfade.toDouble(),
-            min: 0, max: 12, divisions: 12,
-            onChanged: (v) {
-              final secs = v.round();
-              ref.read(crossfadeProvider.notifier).set(secs);
-              ref.read(audioHandlerProvider).setCrossfade(secs);
-            },
-          ),
-          SwitchListTile(
-            title: const Text('Gapless Playback', style: KaivaTextStyles.bodyMedium),
-            value: gapless,
-            onChanged: (v) {
-              ref.read(gaplessPlaybackProvider.notifier).set(v);
-              ref.read(audioHandlerProvider).setGapless(v);
-            },
-          ),
-          SwitchListTile(
-            title: const Text('Volume Normalization', style: KaivaTextStyles.bodyMedium),
-            value: normalize,
-            onChanged: (v) => ref.read(volumeNormalizeProvider.notifier).set(v),
+          ListTile(
+            title: const Text('Crossfade', style: KaivaTextStyles.bodyMedium),
+            subtitle: Text(
+              crossfade == 0 ? 'Off' : '$crossfade s',
+              style: KaivaTextStyles.bodySmall
+                  .copyWith(color: KaivaColors.textMuted),
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded,
+                color: KaivaColors.textMuted),
+            onTap: () => context.push('/settings/crossfade'),
           ),
           SwitchListTile(
             title: const Text('Mono Audio', style: KaivaTextStyles.bodyMedium),

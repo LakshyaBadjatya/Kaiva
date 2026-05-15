@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/kaiva_colors.dart';
 import '../../../core/theme/kaiva_text_styles.dart';
@@ -118,7 +119,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                     return _ArtistCard(
                       artist: artists[i],
                       animIndex: i,
-                    );
+                    )
+                        .animate()
+                        .fadeIn(
+                            delay: (30 * (i % 9)).ms, duration: 300.ms)
+                        .slideY(begin: 0.2, curve: Curves.easeOutCubic)
+                        .scaleXY(begin: 0.92, curve: Curves.easeOutBack);
                   },
                 ),
               ),

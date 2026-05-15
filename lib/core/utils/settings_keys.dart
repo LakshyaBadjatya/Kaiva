@@ -20,4 +20,16 @@ class SettingsKeys {
   static const String onboardingComplete   = 'onboarding_complete';
   static const String onboardingLanguages  = 'onboarding_languages';
   static const String onboardingArtists    = 'onboarding_artists';
+  static const String firstLikeCelebrated  = 'first_like_celebrated';
+
+  // ── Smart Download ──────────────────────────────────────────
+  static const String smartDownloadEnabled   = 'smart_download_enabled';
+  static const String smartDownloadLiked     = 'smart_download_liked';
+  static const String smartDownloadMostPlayed = 'smart_download_most_played';
+  static const String smartDownloadWifiOnly  = 'smart_download_wifi_only';
+  static const String smartDownloadMaxSongs  = 'smart_download_max_songs';
+  static const String smartDownloadLastRun   = 'smart_download_last_run';
+
+  // ── Crossfade auto-tuning ───────────────────────────────────
+  static const String crossfadeAutoTune      = 'crossfade_auto_tune';
 }

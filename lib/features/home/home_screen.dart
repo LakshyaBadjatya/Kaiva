@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -66,6 +67,10 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
+
+          // AI Mood Mix entry card
+          const SliverToBoxAdapter(child: _MoodMixCard()),
+          const SliverToBoxAdapter(child: SizedBox(height: KaivaSpacing.xl)),
 
           feedAsync.when(
             loading: () => const SliverToBoxAdapter(child: _ShimmerFeed()),
@@ -384,6 +389,8 @@ class _SpotlightCarouselState extends State<_SpotlightCarousel> {
                   child: _SpotlightCard(
                     song: songs[i],
                     onPlay: () => widget.onPlay(i),
+                    pageController: _controller,
+                    pageIndex: i,
                   ),
                 );
               },
@@ -431,8 +438,52 @@ class _CarouselDots extends StatelessWidget {
 class _SpotlightCard extends StatelessWidget {
   final Song song;
   final VoidCallback onPlay;
+  final PageController? pageController;
+  final int pageIndex;
 
-  const _SpotlightCard({required this.song, required this.onPlay});
+  const _SpotlightCard({
+    required this.song,
+    required this.onPlay,
+    this.pageController,
+    this.pageIndex = 0,
+  });
+
+  Widget _artwork() {
+    if (song.artworkUrl.isEmpty) {
+      return Container(color: KaivaColors.surfaceContainerHigh);
+    }
+    final image = CachedNetworkImage(
+      imageUrl: song.artworkUrl,
+      fit: BoxFit.cover,
+      placeholder: (_, __) =>
+          Container(color: KaivaColors.surfaceContainerHigh),
+      errorWidget: (_, __, ___) =>
+          Container(color: KaivaColors.surfaceContainerHigh),
+    );
+    if (pageController == null) return image;
+
+    // Horizontal parallax: artwork drifts at 0.4x the page scroll so the
+    // image lags behind the card edge as the user swipes.
+    return AnimatedBuilder(
+      animation: pageController!,
+      builder: (context, child) {
+        double delta = 0;
+        if (pageController!.position.haveDimensions) {
+          final page = pageController!.page ?? pageIndex.toDouble();
+          delta = (page - pageIndex).clamp(-1.0, 1.0);
+        }
+        return Transform.scale(
+          // Slight overscale so parallax shift never reveals an edge.
+          scale: 1.12,
+          child: Transform.translate(
+            offset: Offset(delta * 40, 0),
+            child: child,
+          ),
+        );
+      },
+      child: image,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -447,17 +498,8 @@ class _SpotlightCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Artwork
-            song.artworkUrl.isEmpty
-                ? Container(color: KaivaColors.surfaceContainerHigh)
-                : CachedNetworkImage(
-                    imageUrl: song.artworkUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) =>
-                        Container(color: KaivaColors.surfaceContainerHigh),
-                    errorWidget: (_, __, ___) =>
-                        Container(color: KaivaColors.surfaceContainerHigh),
-                  ),
+            // Artwork (with parallax when driven by a PageController)
+            _artwork(),
             // Gradient overlay
             const DecoratedBox(
               decoration: BoxDecoration(
@@ -838,5 +880,83 @@ class _ShimmerFeed extends StatelessWidget {
         ShimmerHorizontalList(),
       ],
     );
+  }
+}
+
+// ─── AI Mood Mix entry card ─────────────────────────────────
+class _MoodMixCard extends StatelessWidget {
+  const _MoodMixCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: KaivaSpacing.gutter),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          context.push('/mood-mix');
+        },
+        child: Container(
+          height: 96,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(KaivaRadius.lg),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                KaivaColors.accentPrimary.withValues(alpha: 0.22),
+                KaivaColors.secondaryAccent.withValues(alpha: 0.14),
+              ],
+            ),
+            border: Border.all(color: KaivaColors.borderSubtle),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 20),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: KaivaColors.accentGlow,
+                  border: Border.all(
+                      color: KaivaColors.accentPrimary, width: 0.5),
+                ),
+                child: const Icon(Icons.auto_awesome_rounded,
+                    color: KaivaColors.accentPrimary, size: 26),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Mood Mix',
+                        style: KaivaTextStyles.headlineMedium
+                            .copyWith(fontSize: 17)),
+                    const SizedBox(height: 2),
+                    Text(
+                      'A queue picked for right now',
+                      style: KaivaTextStyles.bodySmall
+                          .copyWith(color: KaivaColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(right: 18),
+                child: Icon(Icons.arrow_forward_rounded,
+                    color: KaivaColors.textSecondary, size: 20),
+              ),
+            ],
+          ),
+        ),
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 400.ms)
+        .slideY(begin: 0.2, curve: Curves.easeOutCubic);
   }
 }

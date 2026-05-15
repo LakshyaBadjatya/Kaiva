@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
@@ -220,6 +221,15 @@ class _LyricLine extends StatelessWidget {
     return distance < 0 ? KaivaColors.textSecondary : KaivaColors.textMuted;
   }
 
+  // Far lines are progressively defocused, Spotify-style.
+  double get _blurSigma {
+    final d = distance.abs();
+    if (d <= 1) return 0;
+    if (d == 2) return 1.4;
+    if (d == 3) return 2.6;
+    return 3.8;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -240,10 +250,15 @@ class _LyricLine extends StatelessWidget {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
             opacity: _opacity,
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-            ),
+            child: _blurSigma == 0
+                ? Text(text, textAlign: TextAlign.center)
+                : ImageFiltered(
+                    imageFilter: ui.ImageFilter.blur(
+                      sigmaX: _blurSigma,
+                      sigmaY: _blurSigma,
+                    ),
+                    child: Text(text, textAlign: TextAlign.center),
+                  ),
           ),
         ),
       ),

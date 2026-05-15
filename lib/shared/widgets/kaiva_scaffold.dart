@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/kaiva_colors.dart';
 import '../../features/player/mini_player.dart';
+import 'celebration_overlay.dart';
 import 'offline_banner.dart';
 
 class KaivaScaffold extends StatelessWidget {
@@ -19,13 +20,19 @@ class KaivaScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          const OfflineBanner(),
-          Expanded(child: shell),
-          // MiniPlayer sits above bottom nav (Column, never Stack)
-          const MiniPlayer(),
-          _buildBottomNav(context),
+          Column(
+            children: [
+              const OfflineBanner(),
+              Expanded(child: shell),
+              // MiniPlayer sits above bottom nav (Column, never Stack)
+              const MiniPlayer(),
+              _buildBottomNav(context),
+            ],
+          ),
+          // App-wide celebration layer (first-like confetti, etc.)
+          const Positioned.fill(child: CelebrationOverlay()),
         ],
       ),
     );

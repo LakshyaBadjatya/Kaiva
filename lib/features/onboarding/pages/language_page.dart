@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/kaiva_colors.dart';
 import '../../../core/theme/kaiva_text_styles.dart';
@@ -144,7 +145,13 @@ class _LanguageGrid extends ConsumerWidget {
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: entries.map((e) => _LanguageChip(entry: e)).toList(),
+      children: List.generate(entries.length, (i) {
+        return _LanguageChip(entry: entries[i])
+            .animate()
+            .fadeIn(delay: (35 * i).ms, duration: 280.ms)
+            .slideY(begin: 0.25, curve: Curves.easeOutCubic)
+            .scaleXY(begin: 0.9, curve: Curves.easeOutBack);
+      }),
     );
   }
 }

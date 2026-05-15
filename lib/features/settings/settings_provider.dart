@@ -43,6 +43,11 @@ final monoAudioProvider = StateNotifierProvider<_BoolPrefNotifier, bool>(
 final crossfadeProvider = StateNotifierProvider<_IntPrefNotifier, int>(
     (ref) => _IntPrefNotifier(SettingsKeys.crossfadeDuration, 0));
 
+// ── Auto-tune crossfade ───────────────────────────────────────
+final autoTuneCrossfadeProvider =
+    StateNotifierProvider<_BoolPrefNotifier, bool>(
+        (ref) => _BoolPrefNotifier(SettingsKeys.crossfadeAutoTune, false));
+
 // ── API base URL ──────────────────────────────────────────────
 final apiBaseUrlProvider = StateNotifierProvider<ApiUrlNotifier, String>(
     (ref) => ApiUrlNotifier());

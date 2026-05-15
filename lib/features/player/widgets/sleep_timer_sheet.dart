@@ -94,6 +94,8 @@ final sleepTimerServiceProvider = Provider<SleepTimerService>(
 
 final sleepTimerActiveProvider = StateProvider<bool>((ref) => false);
 final sleepTimerRemainingProvider = StateProvider<Duration>((ref) => Duration.zero);
+// Total configured duration — used to draw the countdown ring.
+final sleepTimerTotalProvider = StateProvider<Duration>((ref) => Duration.zero);
 
 // ── Sheet UI ──────────────────────────────────────────────────
 class SleepTimerSheet extends ConsumerStatefulWidget {
@@ -112,6 +114,7 @@ class _SleepTimerSheetState extends ConsumerState<SleepTimerSheet> {
     final service = ref.read(sleepTimerServiceProvider);
     service.start(duration, handler);
     ref.read(sleepTimerActiveProvider.notifier).state = true;
+    ref.read(sleepTimerTotalProvider.notifier).state = duration;
 
     // Update remaining countdown
     service.remainingStream.listen((d) {
@@ -135,6 +138,7 @@ class _SleepTimerSheetState extends ConsumerState<SleepTimerSheet> {
     final service = ref.read(sleepTimerServiceProvider);
     service.cancel();
     ref.read(sleepTimerActiveProvider.notifier).state = false;
+    ref.read(sleepTimerTotalProvider.notifier).state = Duration.zero;
     Navigator.of(context).pop();
   }
 

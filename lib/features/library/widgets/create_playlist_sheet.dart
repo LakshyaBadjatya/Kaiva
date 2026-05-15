@@ -1,6 +1,9 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/database_provider.dart';
 import '../../../core/database/kaiva_database.dart' show LocalPlaylistsCompanion;
@@ -19,6 +22,37 @@ class _CreatePlaylistSheetState extends ConsumerState<CreatePlaylistSheet> {
   final _nameCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   bool _saving = false;
+  String? _pickedImagePath;
+
+  // Two random KaivaColors stops for the auto gradient fallback.
+  late final List<Color> _autoGradient = _randomGradient();
+
+  List<Color> _randomGradient() {
+    const palette = [
+      KaivaColors.accentPrimary,
+      KaivaColors.accentBright,
+      KaivaColors.accentDeep,
+      KaivaColors.secondaryAccent,
+      KaivaColors.success,
+    ];
+    final r = Random();
+    final a = palette[r.nextInt(palette.length)];
+    Color b = palette[r.nextInt(palette.length)];
+    if (b == a) b = KaivaColors.backgroundElevated;
+    return [a, b];
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
+    if (file != null) {
+      setState(() => _pickedImagePath = file.path);
+    }
+  }
 
   @override
   void dispose() {
@@ -38,6 +72,7 @@ class _CreatePlaylistSheetState extends ConsumerState<CreatePlaylistSheet> {
         id: Value(const Uuid().v4()),
         name: Value(name),
         description: Value(_descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim()),
+        coverPath: Value(_pickedImagePath),
         createdAt: Value(now),
         updatedAt: Value(now),
       ));
@@ -72,6 +107,49 @@ class _CreatePlaylistSheetState extends ConsumerState<CreatePlaylistSheet> {
           ),
           const SizedBox(height: 20),
           const Text('New Playlist', style: KaivaTextStyles.headlineMedium),
+          const SizedBox(height: 20),
+          Center(
+            child: GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: _pickedImagePath == null
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: _autoGradient,
+                        )
+                      : null,
+                  image: _pickedImagePath != null
+                      ? DecorationImage(
+                          image: FileImage(File(_pickedImagePath!)),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _pickedImagePath == null
+                    ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.add_photo_alternate_rounded,
+                                color: KaivaColors.textOnAccent, size: 30),
+                            SizedBox(height: 4),
+                            Text('Add cover',
+                                style: TextStyle(
+                                    color: KaivaColors.textOnAccent,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
           TextField(
             controller: _nameCtrl,
