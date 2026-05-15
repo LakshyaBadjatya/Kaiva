@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,13 @@ import '../../core/theme/kaiva_text_styles.dart';
 import '../../core/models/song.dart';
 import '../../shared/widgets/album_art.dart';
 import 'player_provider.dart';
+
+// ─────────────────────────────────────────────────────────────
+//  Mini Player — Editorial Noir glass dock
+//  · Backdrop-blur (24px) + 70% black fill + 1px white@10% border
+//  · Small album art tile + Playfair title + DM Sans subtitle
+//  · Favorite icon (warm sand), filled play button using on-surface color
+// ─────────────────────────────────────────────────────────────
 
 class MiniPlayer extends ConsumerWidget {
   const MiniPlayer({super.key});
@@ -43,7 +51,6 @@ class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
 
   @override
   Widget build(BuildContext context) {
-    // Only watch isPlaying here — NOT positionDataProvider
     final isPlaying = ref.watch(isPlayingProvider);
     final handler = ref.read(audioHandlerProvider);
 
@@ -65,61 +72,60 @@ class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
         }
         _dragDeltaX = 0;
       },
-      child: Container(
-        height: 72,
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1A1E34), Color(0xFF12151C)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.all(Radius.circular(18)),
-          border: Border.fromBorderSide(
-              BorderSide(color: KaivaColors.borderDefault, width: 0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x407C6EF0),
-              blurRadius: 16,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    AlbumArt(
-                      url: widget.song.artworkUrl,
-                      size: 48,
-                      borderRadius: 8,
-                      heroTag: 'album_art_${widget.song.id}',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(KaivaRadius.md),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              height: 64,
+              decoration: BoxDecoration(
+                color: KaivaColors.surfaceContainerHigh.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(KaivaRadius.md),
+                border: Border.all(color: KaivaColors.borderSubtle, width: 1),
+              ),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(KaivaRadius.sm),
+                            child: AlbumArt(
+                              url: widget.song.artworkUrl,
+                              size: 44,
+                              borderRadius: KaivaRadius.sm,
+                              heroTag: 'album_art_${widget.song.id}',
+                            ),
+                          ),
+                          const SizedBox(width: KaivaSpacing.sm),
+                          Expanded(child: _buildTitle()),
+                          _LikeButton(songId: widget.song.id),
+                          const SizedBox(width: 4),
+                          _PlayPauseButton(isPlaying: isPlaying, handler: handler),
+                          IconButton(
+                            icon: const Icon(Icons.skip_next_rounded, size: 26),
+                            color: KaivaColors.textPrimary,
+                            onPressed: () {
+                              HapticFeedback.lightImpact();
+                              handler.skipToNext();
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints:
+                                const BoxConstraints(minWidth: 36, minHeight: 36),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildTitle()),
-                    _LikeButton(songId: widget.song.id),
-                    _PlayPauseButton(isPlaying: isPlaying, handler: handler),
-                    IconButton(
-                      icon: const Icon(Icons.skip_next, size: 22),
-                      color: KaivaColors.textSecondary,
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        handler.skipToNext();
-                      },
-                      padding: EdgeInsets.zero,
-                      constraints:
-                          const BoxConstraints(minWidth: 36, minHeight: 36),
-                    ),
-                  ],
-                ),
+                  ),
+                  const _MiniProgressBar(),
+                ],
               ),
             ),
-            // Progress bar is a separate leaf widget — only it rebuilds on ticks
-            const _MiniProgressBar(),
-          ],
+          ),
         ),
       ),
     );
@@ -133,25 +139,31 @@ class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 20,
+          height: 18,
           child: title.length > 22
               ? Marquee(
                   text: title,
-                  style: KaivaTextStyles.titleMedium,
+                  style: KaivaTextStyles.labelLarge,
                   scrollAxis: Axis.horizontal,
                   blankSpace: 40,
                   velocity: 30,
                   pauseAfterRound: const Duration(seconds: 2),
                 )
-              : Text(title,
-                  style: KaivaTextStyles.titleMedium,
+              : Text(
+                  title,
+                  style: KaivaTextStyles.labelLarge,
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
+                  overflow: TextOverflow.ellipsis,
+                ),
         ),
         const SizedBox(height: 2),
         Text(
           artist,
-          style: KaivaTextStyles.bodyMedium,
+          style: KaivaTextStyles.labelSmall.copyWith(
+            color: KaivaColors.textSecondary,
+            fontWeight: FontWeight.w400,
+            letterSpacing: 0.1,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -160,7 +172,6 @@ class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
   }
 }
 
-// ── Isolated progress bar — only this widget rebuilds every tick ──
 class _MiniProgressBar extends ConsumerWidget {
   const _MiniProgressBar();
 
@@ -174,7 +185,9 @@ class _MiniProgressBar extends ConsumerWidget {
         : 0.0;
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(18)),
+      borderRadius: const BorderRadius.vertical(
+        bottom: Radius.circular(KaivaRadius.md),
+      ),
       child: LinearProgressIndicator(
         value: progress.clamp(0.0, 1.0),
         minHeight: 2,
@@ -185,7 +198,6 @@ class _MiniProgressBar extends ConsumerWidget {
   }
 }
 
-// ── Like button ───────────────────────────────────────────────
 class _LikeButton extends ConsumerWidget {
   final String songId;
   const _LikeButton({required this.songId});
@@ -193,19 +205,20 @@ class _LikeButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLiked = ref
-        .watch(
-          StreamProvider.autoDispose((r) =>
-              r.watch(databaseProvider).likedSongsDao.watchIsLiked(songId)),
-        )
-        .valueOrNull ??
+            .watch(
+              StreamProvider.autoDispose(
+                (r) => r.watch(databaseProvider).likedSongsDao.watchIsLiked(songId),
+              ),
+            )
+            .valueOrNull ??
         false;
 
     return IconButton(
       icon: Icon(
-        isLiked ? Icons.favorite_rounded : Icons.favorite_border,
+        isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
         size: 20,
       ),
-      color: isLiked ? KaivaColors.secondaryAccent : KaivaColors.textMuted,
+      color: isLiked ? KaivaColors.accentPrimary : KaivaColors.textMuted,
       onPressed: () {
         HapticFeedback.lightImpact();
         ref.read(databaseProvider).likedSongsDao.toggleLike(songId);
@@ -216,7 +229,6 @@ class _LikeButton extends ConsumerWidget {
   }
 }
 
-// ── Play/pause button ─────────────────────────────────────────
 class _PlayPauseButton extends StatefulWidget {
   final bool isPlaying;
   final dynamic handler;
@@ -258,19 +270,26 @@ class _PlayPauseButtonState extends State<_PlayPauseButton>
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: AnimatedIcon(
-        icon: AnimatedIcons.play_pause,
-        progress: _anim,
-        color: KaivaColors.textPrimary,
-        size: 26,
-      ),
-      onPressed: () {
+    // Stitch design: solid white-ish circle with dark icon — uses on-surface fill
+    return GestureDetector(
+      onTap: () {
         HapticFeedback.lightImpact();
         widget.isPlaying ? widget.handler.pause() : widget.handler.play();
       },
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: KaivaColors.textPrimary, // on-surface (creamy off-white)
+          shape: BoxShape.circle,
+        ),
+        child: AnimatedIcon(
+          icon: AnimatedIcons.play_pause,
+          progress: _anim,
+          color: KaivaColors.backgroundPrimary,
+          size: 22,
+        ),
+      ),
     );
   }
 }

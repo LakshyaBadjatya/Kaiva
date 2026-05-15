@@ -49,66 +49,65 @@ class _PlayerControlsState extends ConsumerState<PlayerControls>
       _playPauseCtrl.reverse();
     }
 
-    return Column(
-      children: [
-        // Main transport row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _iconBtn(
-              icon: Icons.skip_previous_rounded,
-              size: 36,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                handler.skipToPrevious();
-              },
-            ),
-            _iconBtn(
-              icon: Icons.replay_10_rounded,
-              size: 28,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                handler.customAction('seekBackward10');
-              },
-            ),
-            // Large play/pause
-            _PlayPauseCircle(
-              isPlaying: isPlaying,
-              anim: _playPauseAnim,
-              onTap: () {
-                HapticFeedback.mediumImpact();
-                isPlaying ? handler.pause() : handler.play();
-              },
-            ),
-            _iconBtn(
-              icon: Icons.forward_10_rounded,
-              size: 28,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                handler.customAction('seekForward10');
-              },
-            ),
-            _iconBtn(
-              icon: Icons.skip_next_rounded,
-              size: 36,
-              onTap: () {
-                HapticFeedback.lightImpact();
-                handler.skipToNext();
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        // Secondary controls row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _ShuffleButton(shuffle: shuffle, handler: handler),
-            _SleepTimerButton(),
-            _RepeatButton(loopMode: loopMode, handler: handler),
-          ],
-        ),
-      ],
+    // Editorial Noir layout: shuffle | replay_10 prev BIG_PLAY next forward_10 | repeat
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _ShuffleButton(shuffle: shuffle, handler: handler),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _iconBtn(
+                icon: Icons.replay_10_rounded,
+                size: 28,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  handler.customAction('seekBackward10');
+                },
+              ),
+              const SizedBox(width: 16),
+              _iconBtn(
+                icon: Icons.skip_previous_rounded,
+                size: 40,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  handler.skipToPrevious();
+                },
+              ),
+              const SizedBox(width: 16),
+              _PlayPauseCircle(
+                isPlaying: isPlaying,
+                anim: _playPauseAnim,
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  isPlaying ? handler.pause() : handler.play();
+                },
+              ),
+              const SizedBox(width: 16),
+              _iconBtn(
+                icon: Icons.skip_next_rounded,
+                size: 40,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  handler.skipToNext();
+                },
+              ),
+              const SizedBox(width: 16),
+              _iconBtn(
+                icon: Icons.forward_10_rounded,
+                size: 28,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  handler.customAction('seekForward10');
+                },
+              ),
+            ],
+          ),
+          _RepeatButton(loopMode: loopMode, handler: handler),
+        ],
+      ),
     );
   }
 
@@ -140,15 +139,15 @@ class _PlayPauseCircle extends StatelessWidget {
     return _ScaleOnTap(
       onTap: onTap,
       child: Container(
-        width: 64,
-        height: 64,
+        width: 80,
+        height: 80,
         decoration: const BoxDecoration(
           color: KaivaColors.accentPrimary,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: KaivaColors.accentGlow,
-              blurRadius: 20,
+              color: Color(0x66EF9F27),
+              blurRadius: 32,
               spreadRadius: 2,
             ),
           ],
@@ -158,7 +157,7 @@ class _PlayPauseCircle extends StatelessWidget {
             icon: AnimatedIcons.play_pause,
             progress: anim,
             color: KaivaColors.textOnAccent,
-            size: 32,
+            size: 44,
           ),
         ),
       ),

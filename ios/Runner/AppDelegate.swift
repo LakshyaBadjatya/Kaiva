@@ -2,30 +2,47 @@ import ActivityKit
 import Flutter
 import UIKit
 
-@main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+// Mirror of the type defined in KaivaWidgetExtension/KaivaActivityAttributes.swift.
+// We inline it here so the Runner target does not need to import the widget target.
+@available(iOS 16.1, *)
+public struct KaivaActivityAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        public var title: String
+        public var artist: String
+        public var albumArt: String
+        public var isPlaying: Bool
+        public var elapsedSeconds: Double
+        public var durationSeconds: Double
+    }
+    public var appName: String = "Kaiva"
+}
 
-    // Holds the currently running Live Activity so we can update / end it
-    private var currentActivity: Activity<KaivaActivityAttributes>?
+@main
+@objc class AppDelegate: FlutterAppDelegate {
+
+    // Live Activity is iOS 16.1+ only. The property must be wrapped in @available
+    // (we stash it as Any? to avoid pulling the type into the class declaration
+    // and forcing every method to be iOS-16.1-gated).
+    private var currentActivity: Any?
 
     override func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        GeneratedPluginRegistrant.register(with: self)
+        setupLiveActivityChannel()
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-    }
-
-    func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-        GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-        setupLiveActivityChannel(binaryMessenger: engineBridge.binaryMessenger)
     }
 
     // ── Flutter ↔ Native channel ─────────────────────────────────────────────
 
-    private func setupLiveActivityChannel(binaryMessenger: FlutterBinaryMessenger) {
+    private func setupLiveActivityChannel() {
+        guard let controller = window?.rootViewController as? FlutterViewController else {
+            return
+        }
         let channel = FlutterMethodChannel(
             name: "com.lakshya.kaiva/live_activity",
-            binaryMessenger: binaryMessenger
+            binaryMessenger: controller.binaryMessenger
         )
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else { return }
@@ -45,7 +62,11 @@ import UIKit
             case "stop":
                 self.stopActivity(result: result)
             case "isSupported":
-                result(ActivityAuthorizationInfo().areActivitiesEnabled)
+                if #available(iOS 16.1, *) {
+                    result(ActivityAuthorizationInfo().areActivitiesEnabled)
+                } else {
+                    result(false)
+                }
             default:
                 result(FlutterMethodNotImplemented)
             }
@@ -54,15 +75,21 @@ import UIKit
 
     // ── Activity lifecycle ───────────────────────────────────────────────────
 
-    private func startActivity(args: [String: Any], result: FlutterResult) {
+    private func startActivity(args: [String: Any], result: @escaping FlutterResult) {
         guard #available(iOS 16.1, *) else { result(nil); return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { result(nil); return }
 
-        // End any previous activity first
         Task {
             await self.endCurrentActivityImmediately()
 
-            let state = self.makeContentState(from: args)
+            let state = KaivaActivityAttributes.ContentState(
+                title: args["title"] as? String ?? "",
+                artist: args["artist"] as? String ?? "",
+                albumArt: args["albumArt"] as? String ?? "",
+                isPlaying: args["isPlaying"] as? Bool ?? false,
+                elapsedSeconds: args["elapsedSeconds"] as? Double ?? 0,
+                durationSeconds: args["durationSeconds"] as? Double ?? 0
+            )
             let attrs = KaivaActivityAttributes()
             let content = ActivityContent(state: state, staleDate: nil)
 
@@ -80,11 +107,20 @@ import UIKit
         }
     }
 
-    private func updateActivity(args: [String: Any], result: FlutterResult) {
+    private func updateActivity(args: [String: Any], result: @escaping FlutterResult) {
         guard #available(iOS 16.1, *) else { result(nil); return }
-        guard let activity = currentActivity else { result(nil); return }
+        guard let activity = currentActivity as? Activity<KaivaActivityAttributes> else {
+            result(nil); return
+        }
 
-        let state = makeContentState(from: args)
+        let state = KaivaActivityAttributes.ContentState(
+            title: args["title"] as? String ?? "",
+            artist: args["artist"] as? String ?? "",
+            albumArt: args["albumArt"] as? String ?? "",
+            isPlaying: args["isPlaying"] as? Bool ?? false,
+            elapsedSeconds: args["elapsedSeconds"] as? Double ?? 0,
+            durationSeconds: args["durationSeconds"] as? Double ?? 0
+        )
         let content = ActivityContent(state: state, staleDate: nil)
 
         Task {
@@ -93,7 +129,7 @@ import UIKit
         }
     }
 
-    private func stopActivity(result: FlutterResult) {
+    private func stopActivity(result: @escaping FlutterResult) {
         guard #available(iOS 16.1, *) else { result(nil); return }
         Task {
             await self.endCurrentActivityImmediately()
@@ -103,21 +139,8 @@ import UIKit
 
     @available(iOS 16.1, *)
     private func endCurrentActivityImmediately() async {
-        guard let activity = currentActivity else { return }
+        guard let activity = currentActivity as? Activity<KaivaActivityAttributes> else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
         currentActivity = nil
-    }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private func makeContentState(from args: [String: Any]) -> KaivaActivityAttributes.ContentState {
-        KaivaActivityAttributes.ContentState(
-            title: args["title"] as? String ?? "",
-            artist: args["artist"] as? String ?? "",
-            albumArt: args["albumArt"] as? String ?? "",
-            isPlaying: args["isPlaying"] as? Bool ?? false,
-            elapsedSeconds: args["elapsedSeconds"] as? Double ?? 0,
-            durationSeconds: args["durationSeconds"] as? Double ?? 0
-        )
     }
 }

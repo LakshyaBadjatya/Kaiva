@@ -85,15 +85,21 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
           final color =
               Color.lerp(_prevBgColor, _bgColor, _bgColorCtrl.value)!;
           return Container(
+            // Editorial Noir radial gradient: amber-tinted glow from top center
+            // down to true black background
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+              gradient: RadialGradient(
+                center: const Alignment(0, -1),
+                radius: 1.4,
                 colors: [
-                  color.withValues(alpha: 0.95),
+                  Color.lerp(
+                    color.withValues(alpha: 0.7),
+                    KaivaColors.accentDim.withValues(alpha: 0.35),
+                    0.5,
+                  )!,
                   KaivaColors.backgroundPrimary,
                 ],
-                stops: const [0.0, 0.6],
+                stops: const [0.0, 0.7],
               ),
             ),
             child: child,
@@ -236,19 +242,25 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 28,
+                  height: 34,
                   child: song.title.length > 24
                       ? Marquee(
                           text: song.title,
-                          style: KaivaTextStyles.songTitle,
+                          style: KaivaTextStyles.songTitle.copyWith(
+                            color: KaivaColors.accentBright,
+                          ),
                           blankSpace: 40,
                           velocity: 30,
                           pauseAfterRound: const Duration(seconds: 2),
                         )
-                      : Text(song.title,
-                          style: KaivaTextStyles.songTitle,
+                      : Text(
+                          song.title,
+                          style: KaivaTextStyles.songTitle.copyWith(
+                            color: KaivaColors.accentBright,
+                          ),
                           maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
                 const SizedBox(height: 4),
                 GestureDetector(

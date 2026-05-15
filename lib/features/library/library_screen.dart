@@ -192,20 +192,20 @@ class _Chip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? KaivaColors.textPrimary
-              : KaivaColors.backgroundTertiary,
-          borderRadius: BorderRadius.circular(50),
+              ? KaivaColors.accentPrimary
+              : KaivaColors.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(KaivaRadius.full),
         ),
         child: Text(
           label,
-          style: KaivaTextStyles.chipLabel.copyWith(
+          style: KaivaTextStyles.labelLarge.copyWith(
             color: isSelected
-                ? KaivaColors.backgroundPrimary
-                : KaivaColors.textSecondary,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                ? KaivaColors.textOnAccent
+                : KaivaColors.textPrimary,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),
@@ -664,11 +664,16 @@ class _LikedSongsEntry extends ConsumerWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF4B3FA0), Color(0xFF8B5CF6)],
+            colors: [KaivaColors.accentPrimary, KaivaColors.accentDim],
           ),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(KaivaRadius.base),
+          border: Border.all(color: KaivaColors.borderSubtle, width: 1),
         ),
-        child: const Icon(Icons.favorite_rounded, color: KaivaColors.textOnAccent, size: 28),
+        child: const Icon(
+          Icons.favorite_rounded,
+          color: KaivaColors.textOnAccent,
+          size: 28,
+        ),
       ),
       title: 'Liked Songs',
       subtitle: 'Playlist • $count song${count == 1 ? '' : 's'}',

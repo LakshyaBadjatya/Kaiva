@@ -38,12 +38,17 @@ class _SeekBarState extends ConsumerState<SeekBar> {
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             activeTrackColor: KaivaColors.accentPrimary,
-            inactiveTrackColor: KaivaColors.seekBarTrack,
-            thumbColor: KaivaColors.seekBarThumb,
+            inactiveTrackColor: KaivaColors.borderSubtle, // white @ 10%
+            thumbColor: KaivaColors.accentPrimary,
             overlayColor: KaivaColors.accentGlow,
-            trackHeight: 3,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            trackHeight: 4,
+            thumbShape: RoundSliderThumbShape(
+              enabledThumbRadius: _draggingValue != null ? 8 : 0,
+              elevation: 0,
+              pressedElevation: 0,
+            ),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+            trackShape: const RoundedRectSliderTrackShape(),
           ),
           child: Slider(
             value: maxMs > 0 ? posMs / maxMs : 0,

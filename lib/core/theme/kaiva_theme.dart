@@ -3,34 +3,54 @@ import 'package:flutter/services.dart';
 import 'kaiva_colors.dart';
 import 'kaiva_text_styles.dart';
 
+// ─────────────────────────────────────────────────────────────
+//  KAIVA — Editorial Noir ThemeData
+//  Source: Stitch design system "Editorial Noir"
+// ─────────────────────────────────────────────────────────────
+
 ThemeData kaivaThemeDark() {
   const colorScheme = ColorScheme.dark(
     brightness: Brightness.dark,
-    primary:            KaivaColors.accentPrimary,
+
+    primary:            KaivaColors.accentBright, // #ffbf6f
     onPrimary:          KaivaColors.textOnAccent,
-    primaryContainer:   KaivaColors.accentDim,
-    onPrimaryContainer: KaivaColors.accentBright,
-    secondary:          KaivaColors.secondaryAccent,
-    onSecondary:        KaivaColors.textOnAccent,
-    secondaryContainer: Color(0xFF2A1828),
-    onSecondaryContainer: KaivaColors.secondaryAccent,
-    tertiary:           KaivaColors.textSecondary,
-    onTertiary:         KaivaColors.textOnAccent,
+    primaryContainer:   KaivaColors.accentPrimary, // #ef9f27
+    onPrimaryContainer: Color(0xFF603B00),
+
+    secondary:          Color(0xFFC8C6C5),
+    onSecondary:        Color(0xFF313030),
+    secondaryContainer: Color(0xFF474746),
+    onSecondaryContainer: Color(0xFFB7B5B4),
+
+    tertiary:           KaivaColors.secondaryAccent, // sky
+    onTertiary:         Color(0xFF00344A),
+    tertiaryContainer:  Color(0xFF37BBF8),
+    onTertiaryContainer: Color(0xFF004864),
+
     surface:            KaivaColors.backgroundSecondary,
     onSurface:          KaivaColors.textPrimary,
-    surfaceContainerHighest: KaivaColors.backgroundTertiary,
-    surfaceContainerHigh:    KaivaColors.backgroundElevated,
-    surfaceContainer:        KaivaColors.backgroundTertiary,
-    surfaceContainerLow:     KaivaColors.backgroundSecondary,
-    surfaceContainerLowest:  KaivaColors.backgroundPrimary,
+    onSurfaceVariant:   KaivaColors.textSecondary,
+    surfaceContainerHighest: KaivaColors.surfaceContainerHighest,
+    surfaceContainerHigh:    KaivaColors.surfaceContainerHigh,
+    surfaceContainer:        KaivaColors.surfaceContainer,
+    surfaceContainerLow:     KaivaColors.surfaceContainerLow,
+    surfaceContainerLowest:  KaivaColors.surfaceContainerLowest,
+
     error:              KaivaColors.error,
-    onError:            KaivaColors.textPrimary,
+    onError:            Color(0xFF690005),
+    errorContainer:     KaivaColors.errorContainer,
+    onErrorContainer:   Color(0xFFFFDAD6),
+
     outline:            KaivaColors.borderDefault,
     outlineVariant:     KaivaColors.borderSubtle,
-    inverseSurface:     KaivaColors.surfaceLight,
-    onInverseSurface:   KaivaColors.textPrimaryLight,
-    inversePrimary:     KaivaColors.accentDeep,
-    scrim:              Color(0xCC0B0D12),
+
+    inverseSurface:     KaivaColors.textPrimary,
+    onInverseSurface:   Color(0xFF313030),
+    inversePrimary:     KaivaColors.accentDim,
+
+    scrim:              Color(0xCC000000),
+    shadow:             Colors.black,
+    surfaceTint:        Color(0xFFFFB95D),
   );
 
   return ThemeData(
@@ -58,18 +78,18 @@ ThemeData kaivaThemeDark() {
     ),
 
     appBarTheme: const AppBarTheme(
-      backgroundColor: KaivaColors.backgroundPrimary,
+      backgroundColor: Colors.transparent,
       foregroundColor: KaivaColors.textPrimary,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
       titleTextStyle: TextStyle(
-        fontFamily: 'DM Sans',
+        fontFamily: 'Playfair Display',
         fontSize: 20,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
         color: KaivaColors.textPrimary,
-        letterSpacing: 0.5,
+        letterSpacing: -0.2,
       ),
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -77,46 +97,46 @@ ThemeData kaivaThemeDark() {
         systemNavigationBarColor: KaivaColors.backgroundPrimary,
         systemNavigationBarIconBrightness: Brightness.light,
       ),
-      iconTheme: IconThemeData(color: KaivaColors.textSecondary, size: 22),
+      iconTheme: IconThemeData(color: KaivaColors.textPrimary, size: 24),
     ),
 
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: KaivaColors.backgroundSecondary,
+      backgroundColor: KaivaColors.glassFill,
       selectedItemColor: KaivaColors.accentPrimary,
       unselectedItemColor: KaivaColors.textMuted,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
-      selectedLabelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 10, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 10, fontWeight: FontWeight.w400),
+      selectedLabelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.1),
+      unselectedLabelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 11, fontWeight: FontWeight.w400),
     ),
 
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: KaivaColors.backgroundSecondary,
-      indicatorColor: KaivaColors.accentGlow,
+      backgroundColor: KaivaColors.glassFill,
+      indicatorColor: Colors.transparent,
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return const IconThemeData(color: KaivaColors.accentPrimary, size: 22);
+          return const IconThemeData(color: KaivaColors.accentPrimary, size: 24);
         }
-        return const IconThemeData(color: KaivaColors.textMuted, size: 22);
+        return const IconThemeData(color: KaivaColors.textMuted, size: 24);
       }),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return const TextStyle(fontFamily: 'DM Sans', fontSize: 10, fontWeight: FontWeight.w600, color: KaivaColors.accentPrimary);
+          return const TextStyle(fontFamily: 'DM Sans', fontSize: 11, fontWeight: FontWeight.w600, color: KaivaColors.accentPrimary, letterSpacing: 0.1);
         }
-        return const TextStyle(fontFamily: 'DM Sans', fontSize: 10, fontWeight: FontWeight.w400, color: KaivaColors.textMuted);
+        return const TextStyle(fontFamily: 'DM Sans', fontSize: 11, fontWeight: FontWeight.w400, color: KaivaColors.textMuted);
       }),
       elevation: 0,
       surfaceTintColor: Colors.transparent,
     ),
 
     cardTheme: CardThemeData(
-      color: KaivaColors.backgroundTertiary,
+      color: KaivaColors.backgroundSecondary,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: KaivaColors.borderSubtle, width: 0.5),
+        borderRadius: BorderRadius.circular(KaivaRadius.lg),
+        side: const BorderSide(color: KaivaColors.borderSubtle, width: 1),
       ),
     ),
 
@@ -127,69 +147,74 @@ ThemeData kaivaThemeDark() {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shadowColor: Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        textStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KaivaRadius.base)),
       ),
     ),
 
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: KaivaColors.accentPrimary,
-        side: const BorderSide(color: KaivaColors.accentDeep, width: 1),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        textStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        foregroundColor: KaivaColors.textPrimary,
+        side: const BorderSide(color: KaivaColors.borderDefault, width: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        textStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KaivaRadius.base)),
       ),
     ),
 
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: KaivaColors.accentPrimary,
-        textStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 13, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w600),
       ),
     ),
 
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
-        foregroundColor: KaivaColors.textSecondary,
+        foregroundColor: KaivaColors.textPrimary,
         highlightColor: KaivaColors.accentGlow,
       ),
     ),
 
     chipTheme: ChipThemeData(
       backgroundColor: KaivaColors.backgroundTertiary,
-      selectedColor: KaivaColors.accentDim,
+      selectedColor: KaivaColors.accentPrimary,
       disabledColor: KaivaColors.backgroundTertiary,
-      labelStyle: KaivaTextStyles.chipLabel.copyWith(color: KaivaColors.textSecondary),
-      secondaryLabelStyle: KaivaTextStyles.chipLabel.copyWith(color: KaivaColors.accentPrimary),
-      side: const BorderSide(color: KaivaColors.borderDefault, width: 0.5),
+      labelStyle: KaivaTextStyles.chipLabel.copyWith(color: KaivaColors.textPrimary),
+      secondaryLabelStyle: KaivaTextStyles.chipLabel.copyWith(color: KaivaColors.textOnAccent, fontWeight: FontWeight.w700),
+      side: const BorderSide(color: KaivaColors.borderSubtle, width: 1),
       selectedShadowColor: Colors.transparent,
       shadowColor: Colors.transparent,
       elevation: 0,
       pressElevation: 0,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(KaivaRadius.base)),
       showCheckmark: false,
     ),
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: KaivaColors.backgroundTertiary,
-      hintStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, color: KaivaColors.textMuted),
+      hintStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 16, color: KaivaColors.textMuted),
+      labelStyle: const TextStyle(fontFamily: 'DM Sans', fontSize: 14, color: KaivaColors.textSecondary),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: KaivaColors.borderSubtle, width: 0.5),
+        borderRadius: BorderRadius.circular(KaivaRadius.base),
+        borderSide: const BorderSide(color: KaivaColors.borderSubtle, width: 1),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: KaivaColors.borderSubtle, width: 0.5),
+        borderRadius: BorderRadius.circular(KaivaRadius.base),
+        borderSide: const BorderSide(color: KaivaColors.borderSubtle, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(KaivaRadius.base),
         borderSide: const BorderSide(color: KaivaColors.accentPrimary, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KaivaRadius.base),
+        borderSide: const BorderSide(color: KaivaColors.error, width: 1),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     ),
 
     sliderTheme: const SliderThemeData(
@@ -197,14 +222,14 @@ ThemeData kaivaThemeDark() {
       inactiveTrackColor: KaivaColors.seekBarTrack,
       thumbColor: KaivaColors.seekBarThumb,
       overlayColor: KaivaColors.accentGlow,
-      trackHeight: 3,
-      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
+      trackHeight: 4,
+      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 7),
       overlayShape: RoundSliderOverlayShape(overlayRadius: 16),
     ),
 
     dividerTheme: const DividerThemeData(
       color: KaivaColors.borderSubtle,
-      thickness: 0.5,
+      thickness: 1,
       space: 0,
     ),
 
@@ -213,9 +238,7 @@ ThemeData kaivaThemeDark() {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       modalElevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(KaivaRadius.xl))),
     ),
 
     dialogTheme: DialogThemeData(
@@ -224,7 +247,10 @@ ThemeData kaivaThemeDark() {
       elevation: 0,
       titleTextStyle: KaivaTextStyles.headlineMedium,
       contentTextStyle: KaivaTextStyles.bodyMedium,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(KaivaRadius.lg),
+        side: const BorderSide(color: KaivaColors.borderSubtle, width: 1),
+      ),
     ),
 
     snackBarTheme: SnackBarThemeData(
@@ -234,18 +260,18 @@ ThemeData kaivaThemeDark() {
       elevation: 0,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: KaivaColors.borderDefault, width: 0.5),
+        borderRadius: BorderRadius.circular(KaivaRadius.base),
+        side: const BorderSide(color: KaivaColors.borderSubtle, width: 1),
       ),
     ),
 
     listTileTheme: const ListTileThemeData(
       tileColor: Colors.transparent,
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      titleTextStyle: KaivaTextStyles.titleMedium,
-      subtitleTextStyle: KaivaTextStyles.bodyMedium,
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      titleTextStyle: KaivaTextStyles.trackTitle,
+      subtitleTextStyle: KaivaTextStyles.trackMeta,
       iconColor: KaivaColors.textMuted,
-      minVerticalPadding: 8,
+      minVerticalPadding: 12,
     ),
 
     switchTheme: SwitchThemeData(
@@ -263,7 +289,7 @@ ThemeData kaivaThemeDark() {
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: KaivaColors.accentPrimary,
       linearTrackColor: KaivaColors.seekBarTrack,
-      linearMinHeight: 3,
+      linearMinHeight: 4,
       circularTrackColor: KaivaColors.backgroundTertiary,
     ),
 
@@ -273,12 +299,12 @@ ThemeData kaivaThemeDark() {
       indicatorColor: KaivaColors.accentPrimary,
       indicatorSize: TabBarIndicatorSize.label,
       dividerColor: KaivaColors.borderSubtle,
-      labelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 13, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 13, fontWeight: FontWeight.w400),
+      labelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.14),
+      unselectedLabelStyle: TextStyle(fontFamily: 'DM Sans', fontSize: 14, fontWeight: FontWeight.w400),
     ),
 
-    iconTheme: const IconThemeData(color: KaivaColors.textSecondary, size: 22),
-    primaryIconTheme: const IconThemeData(color: KaivaColors.accentPrimary, size: 22),
+    iconTheme: const IconThemeData(color: KaivaColors.textPrimary, size: 24),
+    primaryIconTheme: const IconThemeData(color: KaivaColors.accentPrimary, size: 24),
 
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
@@ -302,12 +328,12 @@ ThemeData kaivaThemeLight() {
     brightness: Brightness.light,
     primary:            KaivaColors.accentDeep,
     onPrimary:          KaivaColors.surfaceLight,
-    primaryContainer:   Color(0xFFE8E4FF),
+    primaryContainer:   Color(0xFFFAEEDA),
     onPrimaryContainer: KaivaColors.accentDim,
-    secondary:          KaivaColors.secondaryAccent,
+    secondary:          KaivaColors.accentPrimary,
     onSecondary:        KaivaColors.textOnAccent,
-    secondaryContainer: Color(0xFFFFE4EA),
-    onSecondaryContainer: Color(0xFF8A0020),
+    secondaryContainer: Color(0xFFFAEEDA),
+    onSecondaryContainer: KaivaColors.accentDeep,
     surface:            KaivaColors.surfaceLight,
     onSurface:          KaivaColors.textPrimaryLight,
     surfaceContainerHighest: KaivaColors.surfaceMidLight,
@@ -315,7 +341,7 @@ ThemeData kaivaThemeLight() {
     surfaceContainer:        KaivaColors.surfaceMidLight,
     surfaceContainerLow:     KaivaColors.surfaceLight,
     surfaceContainerLowest:  Colors.white,
-    error:              KaivaColors.error,
+    error:              Color(0xFFBA1A1A),
     onError:            Colors.white,
     outline:            KaivaColors.borderDefaultLight,
     outlineVariant:     KaivaColors.borderSubtleLight,
@@ -343,8 +369,8 @@ ThemeData kaivaThemeLight() {
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: KaivaColors.borderSubtleLight, width: 0.5),
+        borderRadius: BorderRadius.circular(KaivaRadius.lg),
+        side: const BorderSide(color: KaivaColors.borderSubtleLight, width: 1),
       ),
     ),
   );
