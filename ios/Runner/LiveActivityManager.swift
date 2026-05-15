@@ -1,8 +1,22 @@
 import Foundation
 import ActivityKit
 
+// Mirror of KaivaActivityAttributes from the widget extension — inlined here
+// so the Runner target doesn't need to import the widget target.
+@available(iOS 16.1, *)
+public struct KaivaActivityAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        public var title: String
+        public var artist: String
+        public var albumArt: String
+        public var isPlaying: Bool
+        public var elapsedSeconds: Double
+        public var durationSeconds: Double
+    }
+    public var appName: String = "Kaiva"
+}
+
 // All ActivityKit code lives here so AppDelegate.swift stays ActivityKit-free.
-// The compiler only loads this file on iOS 16.1+ thanks to the availability guard.
 
 @available(iOS 16.2, *)
 class LiveActivityManager {
