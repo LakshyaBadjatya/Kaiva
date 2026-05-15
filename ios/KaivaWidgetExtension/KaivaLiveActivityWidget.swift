@@ -144,6 +144,7 @@ private func formatRemaining(_ elapsed: Double, _ duration: Double) -> String {
 // ── Lock Screen / Notification Banner ───────────────────────────────────────
 // Mirrors the Expanded mockup but slightly compressed for banner constraints.
 
+@available(iOS 16.2, *)
 struct KaivaLockScreenView: View {
     let state: KaivaActivityAttributes.ContentState
 
@@ -231,6 +232,7 @@ struct KaivaLockScreenView: View {
 
 // ── Dynamic Island — Compact leading (album art) ────────────────────────────
 
+@available(iOS 16.2, *)
 struct KaivaCompactLeadingView: View {
     let state: KaivaActivityAttributes.ContentState
 
@@ -243,6 +245,7 @@ struct KaivaCompactLeadingView: View {
 
 // ── Dynamic Island — Compact trailing (equalizer bars) ──────────────────────
 
+@available(iOS 16.2, *)
 struct KaivaCompactTrailingView: View {
     let state: KaivaActivityAttributes.ContentState
 
@@ -254,6 +257,7 @@ struct KaivaCompactTrailingView: View {
 
 // ── Dynamic Island — Minimal ────────────────────────────────────────────────
 
+@available(iOS 16.2, *)
 struct KaivaMinimalView: View {
     let state: KaivaActivityAttributes.ContentState
 
@@ -266,6 +270,7 @@ struct KaivaMinimalView: View {
 
 // ── Widget configuration ────────────────────────────────────────────────────
 
+@available(iOS 16.2, *)
 struct KaivaLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: KaivaActivityAttributes.self) { context in

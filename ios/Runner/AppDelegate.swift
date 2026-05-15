@@ -4,7 +4,7 @@ import UIKit
 
 // Mirror of the type defined in KaivaWidgetExtension/KaivaActivityAttributes.swift.
 // We inline it here so the Runner target does not need to import the widget target.
-@available(iOS 16.2, *)
+@available(iOS 16.1, *)
 public struct KaivaActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         public var title: String

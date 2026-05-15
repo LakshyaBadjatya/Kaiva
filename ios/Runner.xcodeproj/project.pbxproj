@@ -19,6 +19,7 @@
 		KW0000001 /* KaivaActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = KW0000011 /* KaivaActivityAttributes.swift */; };
 		KW0000002 /* KaivaLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = KW0000012 /* KaivaLiveActivityWidget.swift */; };
 		KW0000003 /* KaivaWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = KW0000013 /* KaivaWidgetBundle.swift */; };
+		KW0000006 /* KaivaIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = KW0000019 /* KaivaIntents.swift */; };
 		KW0000004 /* KaivaWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = KW0000020 /* KaivaWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		KW0000005 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = KW0000017 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
@@ -78,6 +79,7 @@
 		KW0000011 /* KaivaActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaivaActivityAttributes.swift; sourceTree = "<group>"; };
 		KW0000012 /* KaivaLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaivaLiveActivityWidget.swift; sourceTree = "<group>"; };
 		KW0000013 /* KaivaWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaivaWidgetBundle.swift; sourceTree = "<group>"; };
+		KW0000019 /* KaivaIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaivaIntents.swift; sourceTree = "<group>"; };
 		KW0000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		KW0000015 /* KaivaWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KaivaWidgetExtension.entitlements; sourceTree = "<group>"; };
 		KW0000016 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 				KW0000011 /* KaivaActivityAttributes.swift */,
 				KW0000012 /* KaivaLiveActivityWidget.swift */,
 				KW0000013 /* KaivaWidgetBundle.swift */,
+				KW0000019 /* KaivaIntents.swift */,
 				KW0000014 /* Info.plist */,
 				KW0000015 /* KaivaWidgetExtension.entitlements */,
 			);
@@ -234,6 +237,7 @@
 				KW0000001 /* KaivaActivityAttributes.swift in Sources */,
 				KW0000002 /* KaivaLiveActivityWidget.swift in Sources */,
 				KW0000003 /* KaivaWidgetBundle.swift in Sources */,
+				KW0000006 /* KaivaIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -688,7 +692,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KaivaWidgetExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -712,7 +716,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KaivaWidgetExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -736,7 +740,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = KaivaWidgetExtension/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

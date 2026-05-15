@@ -3,7 +3,7 @@ import Foundation
 
 // Shared between the app and the widget extension.
 // Must be identical in both targets.
-@available(iOS 16.2, *)
+@available(iOS 16.1, *)
 public struct KaivaActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         public var title: String
