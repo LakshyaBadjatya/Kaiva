@@ -48,6 +48,7 @@ class _MiniPlayerContent extends ConsumerStatefulWidget {
 
 class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
   double _dragDeltaX = 0;
+  int _skipDirection = 1; // 1 = next (slide in from right), -1 = prev (from left)
 
   @override
   Widget build(BuildContext context) {
@@ -89,28 +90,50 @@ class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
                             onHorizontalDragEnd: (d) {
                               if (_dragDeltaX < -60) {
                                 HapticFeedback.lightImpact();
+                                setState(() => _skipDirection = 1);
                                 handler.skipToNext();
                               } else if (_dragDeltaX > 60) {
                                 HapticFeedback.lightImpact();
+                                setState(() => _skipDirection = -1);
                                 handler.skipToPrevious();
                               }
                               _dragDeltaX = 0;
                             },
-                            child: Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius:
-                                      BorderRadius.circular(KaivaRadius.sm),
-                                  child: AlbumArt(
-                                    url: widget.song.artworkUrl,
-                                    size: 44,
-                                    borderRadius: KaivaRadius.sm,
-                                    heroTag: 'album_art_${widget.song.id}',
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 280),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              layoutBuilder: (currentChild, previousChildren) =>
+                                  Stack(
+                                alignment: Alignment.centerLeft,
+                                children: [
+                                  ...previousChildren,
+                                  if (currentChild != null) currentChild,
+                                ],
+                              ),
+                              transitionBuilder: (child, anim) {
+                                final isIncoming =
+                                    child.key == ValueKey(widget.song.id);
+                                final begin = isIncoming
+                                    ? Offset(_skipDirection.toDouble(), 0)
+                                    : Offset.zero;
+                                final end = isIncoming
+                                    ? Offset.zero
+                                    : Offset(-_skipDirection.toDouble(), 0);
+                                return ClipRect(
+                                  child: SlideTransition(
+                                    position: Tween<Offset>(
+                                            begin: begin, end: end)
+                                        .animate(anim),
+                                    child: FadeTransition(
+                                        opacity: anim, child: child),
                                   ),
-                                ),
-                                const SizedBox(width: KaivaSpacing.sm),
-                                Expanded(child: _buildTitle()),
-                              ],
+                                );
+                              },
+                              child: _MiniSongTile(
+                                key: ValueKey(widget.song.id),
+                                song: widget.song,
+                              ),
                             ),
                           ),
                         ),
@@ -143,41 +166,64 @@ class _MiniPlayerContentState extends ConsumerState<_MiniPlayerContent> {
     );
   }
 
-  Widget _buildTitle() {
-    final title = widget.song.title;
-    final artist = widget.song.artist;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
+}
+
+class _MiniSongTile extends StatelessWidget {
+  final Song song;
+  const _MiniSongTile({super.key, required this.song});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = song.title;
+    final artist = song.artist;
+    return Row(
       children: [
-        SizedBox(
-          height: 18,
-          child: title.length > 22
-              ? Marquee(
-                  text: title,
-                  style: KaivaTextStyles.labelLarge,
-                  scrollAxis: Axis.horizontal,
-                  blankSpace: 40,
-                  velocity: 30,
-                  pauseAfterRound: const Duration(seconds: 2),
-                )
-              : Text(
-                  title,
-                  style: KaivaTextStyles.labelLarge,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          artist,
-          style: KaivaTextStyles.labelSmall.copyWith(
-            color: KaivaColors.textSecondary,
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0.1,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(KaivaRadius.sm),
+          child: AlbumArt(
+            url: song.artworkUrl,
+            size: 44,
+            borderRadius: KaivaRadius.sm,
+            heroTag: 'album_art_${song.id}',
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(width: KaivaSpacing.sm),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 18,
+                child: title.length > 22
+                    ? Marquee(
+                        text: title,
+                        style: KaivaTextStyles.labelLarge,
+                        scrollAxis: Axis.horizontal,
+                        blankSpace: 40,
+                        velocity: 30,
+                        pauseAfterRound: const Duration(seconds: 2),
+                      )
+                    : Text(
+                        title,
+                        style: KaivaTextStyles.labelLarge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                artist,
+                style: KaivaTextStyles.labelSmall.copyWith(
+                  color: KaivaColors.textSecondary,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ],
     );

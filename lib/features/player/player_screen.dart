@@ -38,6 +38,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   int _pageIndex = 0;
   double _dragDeltaX = 0;
   double _dragDeltaY = 0;
+  int _skipDirection = 1; // 1 = next (slide left), -1 = prev (slide right)
 
   @override
   void initState() {
@@ -124,9 +125,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
       onHorizontalDragEnd: (d) {
         if (_dragDeltaX < -60) {
           HapticFeedback.lightImpact();
+          setState(() => _skipDirection = 1);
           handler.skipToNext();
         } else if (_dragDeltaX > 60) {
           HapticFeedback.lightImpact();
+          setState(() => _skipDirection = -1);
           handler.skipToPrevious();
         }
         _dragDeltaX = 0;
@@ -144,23 +147,74 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
       children: [
         _buildTopBar(song),
         const SizedBox(height: 16),
-        _AlbumArtWidget(
-          song: song,
-          onTap: () => Navigator.of(context).push(
-            PageRouteBuilder(
-              opaque: false,
-              barrierColor: Colors.transparent,
-              pageBuilder: (_, __, ___) => FullscreenArtView(song: song),
-              transitionsBuilder: (_, anim, __, child) => FadeTransition(
-                opacity: anim,
-                child: child,
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 320),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          layoutBuilder: (currentChild, previousChildren) => Stack(
+            alignment: Alignment.center,
+            children: [
+              ...previousChildren,
+              if (currentChild != null) currentChild,
+            ],
+          ),
+          transitionBuilder: (child, anim) {
+            final isIncoming = child.key == ValueKey(song.id);
+            final beginOffset = isIncoming
+                ? Offset(_skipDirection.toDouble(), 0)
+                : Offset.zero;
+            final endOffset = isIncoming
+                ? Offset.zero
+                : Offset(-_skipDirection.toDouble(), 0);
+            return SlideTransition(
+              position: Tween<Offset>(begin: beginOffset, end: endOffset)
+                  .animate(anim),
+              child: FadeTransition(opacity: anim, child: child),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey(song.id),
+            child: _AlbumArtWidget(
+              song: song,
+              onTap: () => Navigator.of(context).push(
+                PageRouteBuilder(
+                  opaque: false,
+                  barrierColor: Colors.transparent,
+                  pageBuilder: (_, __, ___) => FullscreenArtView(song: song),
+                  transitionsBuilder: (_, anim, __, child) => FadeTransition(
+                    opacity: anim,
+                    child: child,
+                  ),
+                  transitionDuration: const Duration(milliseconds: 300),
+                ),
               ),
-              transitionDuration: const Duration(milliseconds: 300),
             ),
           ),
         ),
         const SizedBox(height: 24),
-        _buildSongInfo(song),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 320),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, anim) {
+            final isIncoming = child.key == ValueKey('info_${song.id}');
+            final beginOffset = isIncoming
+                ? Offset(_skipDirection.toDouble() * 0.6, 0)
+                : Offset.zero;
+            final endOffset = isIncoming
+                ? Offset.zero
+                : Offset(-_skipDirection.toDouble() * 0.6, 0);
+            return SlideTransition(
+              position: Tween<Offset>(begin: beginOffset, end: endOffset)
+                  .animate(anim),
+              child: FadeTransition(opacity: anim, child: child),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey('info_${song.id}'),
+            child: _buildSongInfo(song),
+          ),
+        ),
         const SizedBox(height: 16),
         const SeekBar(),
         const SizedBox(height: 8),

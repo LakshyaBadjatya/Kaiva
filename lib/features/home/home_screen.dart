@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -427,125 +428,122 @@ class _SpotlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Note: caller (carousel or single-item branch) controls AspectRatio + horizontal padding.
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-          onPlay();
-        },
-        child: AspectRatio(
-          aspectRatio: 4 / 5,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(KaivaRadius.lg),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Artwork
-                song.artworkUrl.isEmpty
-                    ? Container(color: KaivaColors.surfaceContainerHigh)
-                    : CachedNetworkImage(
-                        imageUrl: song.artworkUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) =>
-                            Container(color: KaivaColors.surfaceContainerHigh),
-                        errorWidget: (_, __, ___) =>
-                            Container(color: KaivaColors.surfaceContainerHigh),
-                      ),
-                // Gradient overlay
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Color(0x66000000),
-                        Color(0xE6000000),
-                      ],
-                      stops: [0.3, 0.6, 1.0],
-                    ),
+        onPlay();
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(KaivaRadius.lg),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Artwork
+            song.artworkUrl.isEmpty
+                ? Container(color: KaivaColors.surfaceContainerHigh)
+                : CachedNetworkImage(
+                    imageUrl: song.artworkUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) =>
+                        Container(color: KaivaColors.surfaceContainerHigh),
+                    errorWidget: (_, __, ___) =>
+                        Container(color: KaivaColors.surfaceContainerHigh),
                   ),
+            // Gradient overlay
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Color(0x66000000),
+                    Color(0xE6000000),
+                  ],
+                  stops: [0.3, 0.6, 1.0],
                 ),
-                // Subtle border overlay
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(KaivaRadius.lg),
-                    border: Border.all(
-                      color: KaivaColors.borderSubtle,
-                      width: 1,
-                    ),
-                  ),
-                ),
-                // Bottom-left text + play FAB
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'TRENDING NOW',
-                                style: KaivaTextStyles.labelSmall.copyWith(
-                                  color: KaivaColors.accentPrimary,
-                                  letterSpacing: 1.4,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                song.title,
-                                style: KaivaTextStyles.displayMedium.copyWith(
-                                  color: Colors.white,
-                                  height: 1.1,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                song.artist,
-                                style: KaivaTextStyles.bodyMedium.copyWith(
-                                  color: Colors.white70,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: const BoxDecoration(
-                            color: KaivaColors.accentPrimary,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0x66EF9F27),
-                                blurRadius: 32,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: KaivaColors.textOnAccent,
-                            size: 36,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            // Subtle border overlay
+            DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(KaivaRadius.lg),
+                border: Border.all(
+                  color: KaivaColors.borderSubtle,
+                  width: 1,
+                ),
+              ),
+            ),
+            // Bottom-left text + play FAB
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'TRENDING NOW',
+                            style: KaivaTextStyles.labelSmall.copyWith(
+                              color: KaivaColors.accentPrimary,
+                              letterSpacing: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            song.title,
+                            style: KaivaTextStyles.displayMedium.copyWith(
+                              color: Colors.white,
+                              height: 1.1,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            song.artist,
+                            style: KaivaTextStyles.bodyMedium.copyWith(
+                              color: Colors.white70,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: const BoxDecoration(
+                        color: KaivaColors.accentPrimary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x66EF9F27),
+                            blurRadius: 32,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow_rounded,
+                        color: KaivaColors.textOnAccent,
+                        size: 36,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -13,10 +13,23 @@ import '../../shared/widgets/song_tile.dart';
 
 final artistDetailProvider =
     FutureProvider.family<Artist, String>((ref, id) async {
+  if (id.isEmpty) {
+    throw StateError('Artist id is empty');
+  }
   final response = await ApiClient.instance().get(ApiEndpoints.artist(id));
-  final data =
-      (response.data as Map<String, dynamic>?)?['data'] as Map<String, dynamic>?
-          ?? {};
+  final body = response.data;
+  Map<String, dynamic>? data;
+  if (body is Map<String, dynamic>) {
+    final raw = body['data'];
+    if (raw is Map<String, dynamic>) {
+      data = raw;
+    } else if (raw is List && raw.isNotEmpty && raw.first is Map<String, dynamic>) {
+      data = raw.first as Map<String, dynamic>;
+    }
+  }
+  if (data == null || data.isEmpty || (data['id']?.toString().isEmpty ?? true)) {
+    throw StateError('Artist not found ($id)');
+  }
   return Artist.fromJson(data);
 });
 
@@ -37,10 +50,34 @@ class ArtistDetailScreen extends ConsumerWidget {
           itemBuilder: (_, __) => const ShimmerSongTile(),
         ),
       ),
-      error: (_, __) => Scaffold(
+      error: (err, _) => Scaffold(
         appBar: AppBar(),
-        body: const Center(
-          child: Text('Could not load artist.', style: KaivaTextStyles.bodyMedium),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.person_off_outlined,
+                    size: 56, color: KaivaColors.textMuted),
+                const SizedBox(height: 12),
+                const Text('Could not load artist.',
+                    style: KaivaTextStyles.bodyMedium),
+                const SizedBox(height: 4),
+                Text(
+                  err.toString(),
+                  style: KaivaTextStyles.labelSmall
+                      .copyWith(color: KaivaColors.textMuted),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: () => ref.invalidate(artistDetailProvider(artistId)),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
       data: (artist) => _ArtistScaffold(artist: artist),
