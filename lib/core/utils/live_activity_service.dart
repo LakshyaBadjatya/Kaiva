@@ -10,10 +10,31 @@ class LiveActivityService {
   static LiveActivityService? _instance;
   static LiveActivityService get instance =>
       _instance ??= LiveActivityService._();
-  LiveActivityService._();
+  LiveActivityService._() {
+    if (Platform.isIOS) {
+      _channel.setMethodCallHandler(_handleNativeCall);
+    }
+  }
 
   bool _supported = false;
   bool _checked = false;
+
+  /// Called when the user taps an interactive control in the iOS Dynamic
+  /// Island / Live Activity (iOS 17+). Action is one of:
+  /// 'play_pause', 'next', 'previous'.
+  void Function(String action)? onAction;
+
+  Future<dynamic> _handleNativeCall(MethodCall call) async {
+    if (call.method != 'onAction') return null;
+    final args = call.arguments;
+    if (args is Map) {
+      final action = args['action'];
+      if (action is String) {
+        onAction?.call(action);
+      }
+    }
+    return null;
+  }
 
   Future<bool> get isSupported async {
     if (!Platform.isIOS) return false;

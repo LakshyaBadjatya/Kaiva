@@ -39,6 +39,21 @@ class KaivaAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler 
 
   KaivaAudioHandler() {
     _init();
+    LiveActivityService.instance.onAction = _handleLiveActivityAction;
+  }
+
+  void _handleLiveActivityAction(String action) {
+    switch (action) {
+      case 'play_pause':
+        _player.playing ? pause() : play();
+        break;
+      case 'next':
+        skipToNext();
+        break;
+      case 'previous':
+        skipToPrevious();
+        break;
+    }
   }
 
   Future<void> _init() async {

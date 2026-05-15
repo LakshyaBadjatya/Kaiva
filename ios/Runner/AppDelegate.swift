@@ -4,7 +4,7 @@ import UIKit
 
 // Mirror of the type defined in KaivaWidgetExtension/KaivaActivityAttributes.swift.
 // We inline it here so the Runner target does not need to import the widget target.
-@available(iOS 16.1, *)
+@available(iOS 16.2, *)
 public struct KaivaActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         public var title: String
@@ -17,13 +17,25 @@ public struct KaivaActivityAttributes: ActivityAttributes {
     public var appName: String = "Kaiva"
 }
 
+// ── Bridge constants — must match KaivaIntents.swift in widget target ───────
+
+private enum LiveActivityBridge {
+    static let appGroup = "group.com.lakshya.kaiva"
+    static let pendingActionKey = "kaiva.pendingPlaybackAction"
+    static let actionTimestampKey = "kaiva.pendingPlaybackActionTimestamp"
+    static let darwinNotification = "com.lakshya.kaiva.playbackAction"
+}
+
 @main
 @objc class AppDelegate: FlutterAppDelegate {
 
-    // Live Activity is iOS 16.1+ only. The property must be wrapped in @available
+    // Live Activity is iOS 16.2+ only. The property must be wrapped in @available
     // (we stash it as Any? to avoid pulling the type into the class declaration
     // and forcing every method to be iOS-16.1-gated).
     private var currentActivity: Any?
+
+    // Retained channel — used both for Flutter→native and native→Flutter calls.
+    private var liveActivityChannel: FlutterMethodChannel?
 
     override func application(
         _ application: UIApplication,
@@ -31,7 +43,40 @@ public struct KaivaActivityAttributes: ActivityAttributes {
     ) -> Bool {
         GeneratedPluginRegistrant.register(with: self)
         setupLiveActivityChannel()
+        registerDarwinObserver()
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
+    // ── Darwin notification observer (App Intent → Flutter) ─────────────────
+
+    private func registerDarwinObserver() {
+        let observer = Unmanaged.passUnretained(self).toOpaque()
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            observer,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let me = Unmanaged<AppDelegate>.fromOpaque(observer).takeUnretainedValue()
+                me.handlePendingPlaybackAction()
+            },
+            LiveActivityBridge.darwinNotification as CFString,
+            nil,
+            .deliverImmediately
+        )
+        // Also check on launch in case an action fired while app was suspended.
+        handlePendingPlaybackAction()
+    }
+
+    private func handlePendingPlaybackAction() {
+        guard let defaults = UserDefaults(suiteName: LiveActivityBridge.appGroup),
+              let action = defaults.string(forKey: LiveActivityBridge.pendingActionKey)
+        else { return }
+        defaults.removeObject(forKey: LiveActivityBridge.pendingActionKey)
+        defaults.synchronize()
+
+        DispatchQueue.main.async { [weak self] in
+            self?.liveActivityChannel?.invokeMethod("onAction", arguments: ["action": action])
+        }
     }
 
     // ── Flutter ↔ Native channel ─────────────────────────────────────────────
@@ -44,6 +89,7 @@ public struct KaivaActivityAttributes: ActivityAttributes {
             name: "com.lakshya.kaiva/live_activity",
             binaryMessenger: controller.binaryMessenger
         )
+        liveActivityChannel = channel
         channel.setMethodCallHandler { [weak self] call, result in
             guard let self else { return }
             switch call.method {
@@ -62,7 +108,7 @@ public struct KaivaActivityAttributes: ActivityAttributes {
             case "stop":
                 self.stopActivity(result: result)
             case "isSupported":
-                if #available(iOS 16.1, *) {
+                if #available(iOS 16.2, *) {
                     result(ActivityAuthorizationInfo().areActivitiesEnabled)
                 } else {
                     result(false)
@@ -76,7 +122,7 @@ public struct KaivaActivityAttributes: ActivityAttributes {
     // ── Activity lifecycle ───────────────────────────────────────────────────
 
     private func startActivity(args: [String: Any], result: @escaping FlutterResult) {
-        guard #available(iOS 16.1, *) else { result(nil); return }
+        guard #available(iOS 16.2, *) else { result(nil); return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { result(nil); return }
 
         Task {
@@ -108,7 +154,7 @@ public struct KaivaActivityAttributes: ActivityAttributes {
     }
 
     private func updateActivity(args: [String: Any], result: @escaping FlutterResult) {
-        guard #available(iOS 16.1, *) else { result(nil); return }
+        guard #available(iOS 16.2, *) else { result(nil); return }
         guard let activity = currentActivity as? Activity<KaivaActivityAttributes> else {
             result(nil); return
         }
@@ -130,14 +176,14 @@ public struct KaivaActivityAttributes: ActivityAttributes {
     }
 
     private func stopActivity(result: @escaping FlutterResult) {
-        guard #available(iOS 16.1, *) else { result(nil); return }
+        guard #available(iOS 16.2, *) else { result(nil); return }
         Task {
             await self.endCurrentActivityImmediately()
             result(nil)
         }
     }
 
-    @available(iOS 16.1, *)
+    @available(iOS 16.2, *)
     private func endCurrentActivityImmediately() async {
         guard let activity = currentActivity as? Activity<KaivaActivityAttributes> else { return }
         await activity.end(nil, dismissalPolicy: .immediate)
