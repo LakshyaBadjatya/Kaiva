@@ -16,6 +16,9 @@ workflows:
         XCODE_SCHEME: Runner
 
     scripts:
+      - name: Write firebase_options.dart
+        script: printf '%s' "$FIREBASE_OPTIONS_DART" | base64 --decode > lib/firebase_options.dart
+
       - name: Get Flutter packages
         script: flutter pub get
 
