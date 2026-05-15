@@ -1,22 +1,42 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'firebase_status.dart';
 
 class FirebaseService {
   FirebaseService._();
   static final FirebaseService instance = FirebaseService._();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  // Lazy — touching FirebaseAuth.instance/FirebaseFirestore.instance throws
+  // if Firebase didn't initialize, so we never build these at construction
+  // and never build them at all when Firebase is unavailable.
+  FirebaseAuth? _authInstance;
+  FirebaseFirestore? _dbInstance;
+  GoogleSignIn? _googleSignInInstance;
+
+  bool get _available => firebaseReady;
+
+  FirebaseAuth get _auth => _authInstance ??= FirebaseAuth.instance;
+  FirebaseFirestore get _db => _dbInstance ??= FirebaseFirestore.instance;
+  GoogleSignIn get _googleSignIn =>
+      _googleSignInInstance ??= GoogleSignIn();
 
   // ── Auth state ───────────────────────────────────────────────
-  User? get currentUser => _auth.currentUser;
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  User? get currentUser => _available ? _auth.currentUser : null;
+  Stream<User?> get authStateChanges =>
+      _available ? _auth.authStateChanges() : Stream.value(null);
   bool get isSignedIn => currentUser != null;
 
   // ── Sign-in methods ──────────────────────────────────────────
+  void _requireFirebase() {
+    if (!_available) {
+      throw Exception(
+          'Sign-in unavailable: Firebase is not configured on this build.');
+    }
+  }
+
   Future<UserCredential> signInWithGoogle() async {
+    _requireFirebase();
     final googleUser = await _googleSignIn.signIn();
     if (googleUser == null) throw Exception('Google sign-in cancelled');
     final googleAuth = await googleUser.authentication;
@@ -30,6 +50,7 @@ class FirebaseService {
   }
 
   Future<UserCredential> signInWithEmail(String email, String password) async {
+    _requireFirebase();
     final result = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
@@ -40,6 +61,7 @@ class FirebaseService {
 
   Future<UserCredential> registerWithEmail(
       String email, String password, String displayName) async {
+    _requireFirebase();
     final result = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -50,12 +72,15 @@ class FirebaseService {
   }
 
   Future<void> signOut() async {
+    if (!_available) return;
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
 
-  Future<void> sendPasswordReset(String email) =>
-      _auth.sendPasswordResetEmail(email: email);
+  Future<void> sendPasswordReset(String email) {
+    _requireFirebase();
+    return _auth.sendPasswordResetEmail(email: email);
+  }
 
   // ── User document ────────────────────────────────────────────
   Future<void> _ensureUserDoc(User user, {String? displayName}) async {

@@ -14,6 +14,7 @@ import 'core/api/api_endpoints.dart';
 import 'core/utils/settings_keys.dart';
 import 'core/database/database_provider.dart';
 import 'core/database/kaiva_database.dart';
+import 'core/firebase/firebase_status.dart';
 import 'core/firebase/sync_service.dart';
 import 'core/recommender/recommender_provider.dart';
 import 'core/theme/kaiva_colors.dart';
@@ -94,28 +95,45 @@ class _AppDeps {
 }
 
 Future<_AppDeps> _initApp() async {
-  // Firebase init
-  await Firebase.initializeApp();
+  // Firebase init — MUST NOT crash the app. A bad/placeholder
+  // GoogleService-Info.plist throws here; we swallow it and run offline.
+  try {
+    await Firebase.initializeApp();
+    firebaseReady = true;
+  } catch (e, st) {
+    firebaseReady = false;
+    debugPrint('Firebase init failed (running without it): $e\n$st');
+  }
 
   // Hive init
-  await Hive.initFlutter();
-  await Hive.openBox('kaiva_settings');
-
-  // Always reset API URL to current default — wipes any stale saved URL
-  await Hive.box('kaiva_settings').put('api_base_url', ApiEndpoints.defaultBaseUrl);
+  try {
+    await Hive.initFlutter();
+    await Hive.openBox('kaiva_settings');
+    // Always reset API URL to current default — wipes any stale saved URL
+    await Hive.box('kaiva_settings')
+        .put('api_base_url', ApiEndpoints.defaultBaseUrl);
+  } catch (e) {
+    debugPrint('Hive init failed: $e');
+  }
   ApiClient.reinitialize(ApiEndpoints.defaultBaseUrl);
 
-  // Audio service init
-  final audioHandler = await AudioService.init(
-    builder: () => KaivaAudioHandler(),
-    config: const AudioServiceConfig(
-      androidNotificationChannelId: 'com.lakshya.kaiva.channel.audio',
-      androidNotificationChannelName: 'Kaiva',
-      androidNotificationOngoing: false,
-      androidStopForegroundOnPause: true,
-      notificationColor: Color(0xFFEF9F27),
-    ),
-  );
+  // Audio service init — wrap so a platform failure doesn't abort startup.
+  late final KaivaAudioHandler audioHandler;
+  try {
+    audioHandler = await AudioService.init(
+      builder: () => KaivaAudioHandler(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.lakshya.kaiva.channel.audio',
+        androidNotificationChannelName: 'Kaiva',
+        androidNotificationOngoing: false,
+        androidStopForegroundOnPause: true,
+        notificationColor: Color(0xFFEF9F27),
+      ),
+    );
+  } catch (e) {
+    debugPrint('AudioService.init failed, using bare handler: $e');
+    audioHandler = KaivaAudioHandler();
+  }
 
   // Single DB instance shared across the whole app — avoids Drift multiple-instance warning
   final db = KaivaDatabase();
@@ -138,9 +156,13 @@ Future<_AppDeps> _initApp() async {
 
   // flutter_downloader init — port must be registered before initialize()
   // so callbacks that fire immediately on cold start don't get dropped.
-  initDownloadPort();
-  await FlutterDownloader.initialize(debug: kDebugMode);
-  await FlutterDownloader.registerCallback(downloadCallback);
+  try {
+    initDownloadPort();
+    await FlutterDownloader.initialize(debug: kDebugMode);
+    await FlutterDownloader.registerCallback(downloadCallback);
+  } catch (e) {
+    debugPrint('flutter_downloader init failed: $e');
+  }
 
   return _AppDeps(audioHandler, db);
 }
